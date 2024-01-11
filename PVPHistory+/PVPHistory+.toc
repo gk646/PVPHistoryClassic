@@ -3,7 +3,7 @@
 ## Notes: Saves your battleground data and makes it accessible to view
 ## Version: 0.1
 ## Author: gk646
-## SavedVariables: PVP_HISTORY
+## SavedVariablesPerCharacter: PVP_HISTORY
 
 PVPTracker.lua
 Main.lua
