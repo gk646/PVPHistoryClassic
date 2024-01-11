@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="LUA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/PVPHistory+" isTestSource="false" />
+    </content>
+    <orderEntry type="jdk" jdkName="Lua" jdkType="Lua SDK" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+  <component name="SonarLintModuleSettings">
+    <option name="uniqueId" value="909cb474-2da6-4066-b5e2-8d37543f715a" />
+  </component>
+</module>
