@@ -2,7 +2,7 @@
 ![WoW Classic](https://img.shields.io/badge/WoW%20Classic-v1.15.0-9cf.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-### Download from the official [CurseForge website](https://www.curseforge.com/wow/addons/gearscoreclassic)
+### Download from the official [CurseForge website](https://legacy.curseforge.com/wow/addons/pvphistoryclassic)
 
 --- 
 PVPHistoryClassic+
@@ -41,5 +41,4 @@ Currently, it tracks the following stats:
 
 ## Usage
 
-Simply install the addon, and it will automatically display gear scores in the character and inspect frames. There are no additional commands or
-configurations yet.
+Simply install the addon, and it will automatically track your battlegrounds. There arent any configuration options yet.
