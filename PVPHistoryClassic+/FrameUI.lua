@@ -2,62 +2,34 @@ FRAME_UI = {}
 
 frame = CreateFrame("Frame", "BattlegroundHistoryFrame", UIParent, "BasicFrameTemplateWithInset")
 local SORT_DIRECTION = "ASC"  -- Global variable to toggle sorting direction
-
-local function SortByDate(a, b)
-    if not a or not a.date or not b or not b.date then
+local function CreateTextString(parent, font, point, relativeTo, relativePoint, xOff, yOff, text)
+    local textString = parent:CreateFontString(nil, "OVERLAY", font)
+    textString:SetPoint(point, relativeTo, relativePoint, xOff, yOff)
+    textString:SetText(text)
+    textString:Hide()  -- Initially hide the text
+    return textString
+end
+local function GenericSort(a, b, key, isNumeric)
+    if not a or not b or not a[key] or not b[key] then
         return false
     end
-    if SORT_DIRECTION == "ASC" then
-        return a.date < b.date
+
+    if isNumeric then
+        -- For numeric values, higher numbers can be considered 'greater'
+        if SORT_DIRECTION == "ASC" then
+            return a[key] > b[key]
+        else
+            return a[key] < b[key]
+        end
     else
-        return a.date > b.date
+        -- For non-numeric values, use standard Lua string comparison
+        if SORT_DIRECTION == "ASC" then
+            return tostring(a[key]) < tostring(b[key])
+        else
+            return tostring(a[key]) > tostring(b[key])
+        end
     end
 end
-
-local function SortByName(a, b)
-    if not a or not b then
-        return false
-    end
-    if SORT_DIRECTION == "ASC" then
-        return a.name < b.name
-    else
-        return a.name > b.name
-    end
-end
-
-local function SortByKills(a, b)
-    if not a or not b then
-        return false
-    end
-    if SORT_DIRECTION == "ASC" then
-        return a.kills > b.kills
-    else
-        return a.kills < b.kills
-    end
-end
-
-local function SortByDeaths(a, b)
-    if not a or not b then
-        return false
-    end
-    if SORT_DIRECTION == "ASC" then
-        return a.deaths < b.deaths
-    else
-        return a.deaths > b.deaths
-    end
-end
-
-local function SortByDuration(a, b)
-    if not a or not b then
-        return false
-    end
-    if SORT_DIRECTION == "ASC" then
-        return a.duration > b.duration
-    else
-        return a.duration < b.duration
-    end
-end
-
 local function SortByOutCome(a, b)
     if not a or not b then
         return false
@@ -75,7 +47,6 @@ local function SortByOutCome(a, b)
         return aValue > bValue
     end
 end
-
 local function CreateTableHeader(parent, width, height, text, anchorPoint, relativeTo, relativePoint, xOffset, yOffset)
     local header = CreateFrame("Button", nil, parent)
     header:SetSize(width, height)
@@ -101,6 +72,20 @@ local function CreateTableHeader(parent, width, height, text, anchorPoint, relat
 
     return header
 end
+local function FormatTime(totalSeconds)
+    local seconds = totalSeconds % 60
+    local totalMinutes = math.floor(totalSeconds / 60)
+    local minutes = totalMinutes % 60
+    local totalHours = math.floor(totalMinutes / 60)
+    local hours = totalHours % 24
+    local days = math.floor(totalHours / 24)
+
+    if days > 0 then
+        return string.format("%dd:%02dh:%02dm:%02ds", days, hours, minutes, seconds)
+    else
+        return string.format("%02dh:%02dm", hours, minutes)
+    end
+end
 
 local width = 125
 local dateHeader = CreateTableHeader(frame, width, 20, "Date", "TOPLEFT", frame, "TOPLEFT", 10, -30)
@@ -109,6 +94,7 @@ local killsHeader = CreateTableHeader(frame, width, 20, "Kills", "LEFT", nameHea
 local deathsHeader = CreateTableHeader(frame, width, 20, "Deaths", "LEFT", killsHeader, "RIGHT", -5, 0)
 local durationHeader = CreateTableHeader(frame, width, 20, "Duration", "LEFT", deathsHeader, "RIGHT", -10, 0)
 local outcomeHeader = CreateTableHeader(frame, width, 20, "Outcome", "LEFT", durationHeader, "RIGHT", -10, 0)
+
 
 local function UpdateSortArrows(header)
     -- Hide all arrows and show the one on the active header
@@ -123,46 +109,122 @@ local function UpdateSortArrows(header)
         header.arrow:SetTexCoord(0, 0.56, 1, 0)
     end
 end
+local function AddSortingFunctions(baseFrame)
+    local function SortData(key, isNumeric)
+        SORT_DIRECTION = SORT_DIRECTION == "ASC" and "DESC" or "ASC"
+        table.sort(PVP_HISTORY, function(a, b)
+            return GenericSort(a, b, key, isNumeric)
+        end)
+        FRAME_UI.UpdateBattlegroundHistoryFrame(baseFrame)
+    end
+    dateHeader:SetScript("OnClick", function()
+        SortData("date", false)
+        UpdateSortArrows(dateHeader)
+    end)
 
-local function AddSecondTab(baseFrame)
-    baseFrame.statsTitle = baseFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-    baseFrame.statsTitle:SetPoint("TOP", baseFrame, "TOP", 0, -40)
-    baseFrame.statsTitle:SetText("Battleground Statistics")
+    nameHeader:SetScript("OnClick", function()
+        SortData("name", false)
+        UpdateSortArrows(nameHeader)
+    end)
 
-    baseFrame.averageKillsText = baseFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    baseFrame.averageKillsText:SetPoint("TOPLEFT", baseFrame.statsTitle, "BOTTOMLEFT", 0, -20)
+    killsHeader:SetScript("OnClick", function()
+        SortData("kills", true)
+        UpdateSortArrows(killsHeader)
+    end)
 
-    baseFrame.averageDeathsText = baseFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    baseFrame.averageDeathsText:SetPoint("TOPLEFT", baseFrame.averageKillsText, "BOTTOMLEFT", 0, -10)
+    deathsHeader:SetScript("OnClick", function()
+        SortData("deaths", true)
+        UpdateSortArrows(deathsHeader)
+    end)
 
-    baseFrame.winRateText = baseFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    baseFrame.winRateText:SetPoint("TOPLEFT", baseFrame.averageDeathsText, "BOTTOMLEFT", 0, -10)
+    durationHeader:SetScript("OnClick", function()
+        SortData("duration", true)
+        UpdateSortArrows(durationHeader)
+    end)
 
-    -- Initially hide the statistics text
-    baseFrame.statsTitle:Hide()
-    baseFrame.averageKillsText:Hide()
-    baseFrame.averageDeathsText:Hide()
-    baseFrame.winRateText:Hide()
-
+    outcomeHeader:SetScript("OnClick", function()
+        -- Assuming outcome sorting is special and uses SortByOutCome
+        SORT_DIRECTION = SORT_DIRECTION == "ASC" and "DESC" or "ASC"
+        table.sort(PVP_HISTORY, SortByOutCome)
+        UpdateSortArrows(outcomeHeader)
+    end)
 end
+local function CalculateBattlegroundStatsAndTotals(filteredList)
+    local totalKills, totalDeaths, totalWins, totalHonorableKills, totalDuration, totalBattles, totalHonorGained = 0, 0, 0, 0, 0, 0, 0
 
-local function CalculateBattlegroundStats()
-    local totalKills, totalDeaths, totalWins, totalBattles = 0, 0, 0, #PVP_HISTORY
-    for _, bg in ipairs(PVP_HISTORY) do
-        totalKills = totalKills + bg.kills
-        totalDeaths = totalDeaths + bg.deaths
+    for _, bg in ipairs(filteredList) do
+        totalBattles = totalBattles + 1
+        totalHonorGained = totalHonorGained + (bg.honorGained or 0)
+        totalKills = totalKills + (bg.kills or 0)
+        totalDeaths = totalDeaths + (bg.deaths or 0)
+        totalHonorableKills = totalHonorableKills + (bg.honorableKills or 0)
+        totalDuration = totalDuration + (bg.duration or 0)
+
         if bg.outcome == "Victory" then
             totalWins = totalWins + 1
         end
     end
 
-    local averageKills = totalBattles > 0 and totalKills / totalBattles or 0
-    local averageDeaths = totalBattles > 0 and totalDeaths / totalBattles or 0
+    local avgKills = totalBattles > 0 and totalKills / totalBattles or 0
+    local avgDeaths = totalBattles > 0 and totalDeaths / totalBattles or 0
+    local avgHonorableKills = totalBattles > 0 and totalHonorableKills / totalBattles or 0
+    local avgDuration = totalBattles > 0 and totalDuration / totalBattles or 0
     local winRate = totalBattles > 0 and (totalWins / totalBattles) * 100 or 0
+    local avgHonor = totalHonorGained > 0 and totalHonorGained / totalBattles or 0
 
-    return averageKills, averageDeaths, winRate
+    return avgKills, avgDeaths, avgHonorableKills, avgDuration, winRate, totalKills, totalDeaths, totalHonorableKills, totalDuration, totalBattles, avgHonor, totalHonorGained
+end
+local function AddDiagramPlaceholders(baseFrame)
+    -- Line Chart Placeholder
+    baseFrame.lineChartPlaceholder = CreateFrame("Frame", nil, baseFrame)
+    baseFrame.lineChartPlaceholder:SetSize(250, 150)  -- Adjusted size
+    baseFrame.lineChartPlaceholder:SetPoint("TOPRIGHT", baseFrame, "TOPRIGHT", -30, -40)
+    baseFrame.lineChartPlaceholder:Hide()  -- Initially hidden
+
+    -- Class Distribution Placeholder
+    baseFrame.classDistributionPlaceholder = CreateFrame("Frame", nil, baseFrame)
+    baseFrame.classDistributionPlaceholder:SetSize(250, 150)  -- Adjusted size
+    baseFrame.classDistributionPlaceholder:SetPoint("TOPRIGHT", baseFrame.lineChartPlaceholder, "BOTTOMRIGHT", 0, -30)
+    baseFrame.classDistributionPlaceholder:Hide()  -- Initially hidden
+
+    -- Texture for Line Chart Placeholder
+    local texture = baseFrame.lineChartPlaceholder:CreateTexture()
+    texture:SetAllPoints(true)
+    texture:SetColorTexture(0.3, 0.3, 0.3, 0.7)  -- Grey color
+
+    -- Texture for Class Distribution Placeholder
+    local texture2 = baseFrame.classDistributionPlaceholder:CreateTexture()
+    texture2:SetAllPoints(true)
+    texture2:SetColorTexture(0.3, 0.3, 0.3, 0.7)  -- Grey color
 end
 
+local function AddStatisticsText(baseFrame)
+    local indent = 20  -- Indentation for items within a category
+    local categorySpacing = 30  -- Vertical space between categories
+
+    -- Averages per Match Category
+    baseFrame.categoryHeader = CreateTextString(baseFrame, "GameFontNormalLarge", "TOPLEFT", baseFrame, "TOPLEFT", 20, -40, "Averages per Match:")
+    baseFrame.averageKillingBlowsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.categoryHeader, "BOTTOMLEFT", indent, -10, "Average Killing Blows: ")
+    baseFrame.averageHonorableKillsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.averageKillingBlowsText, "BOTTOMLEFT", 0, -10, "Average Honorable Kills: ")
+    baseFrame.averageDeathsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.averageHonorableKillsText, "BOTTOMLEFT", 0, -10, "Average Deaths: ")
+    baseFrame.averageDurationText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.averageDeathsText, "BOTTOMLEFT", 0, -10, "Average Duration: ")
+    baseFrame.averageHonourText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.averageDurationText, "BOTTOMLEFT", 0, -10, "Average Honour: ")
+
+    -- Totals Category
+    baseFrame.totalsCategoryHeader = CreateTextString(baseFrame, "GameFontNormalLarge", "TOPLEFT", baseFrame.averageHonourText, "BOTTOMLEFT", -20, -categorySpacing, "Totals:")
+    baseFrame.winRateText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.totalsCategoryHeader, "BOTTOMLEFT", indent, -10, "Winrate: ")
+    baseFrame.totalKillsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.winRateText, "BOTTOMLEFT", 0, -10, "Kills: ")
+    baseFrame.totalDeathsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.totalKillsText, "BOTTOMLEFT", 0, -10, "Deaths: ")
+    baseFrame.totalHonorableKillsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.totalDeathsText, "BOTTOMLEFT", 0, -10, "Honorable Kills: ")
+    baseFrame.timeInsideText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.totalHonorableKillsText, "BOTTOMLEFT", 0, -10, "Time Inside: ")
+    baseFrame.totalHonorGained = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.timeInsideText, "BOTTOMLEFT", 0, -10, "Honor: ")
+
+    baseFrame.totalEntries = CreateTextString(baseFrame, "GameFontNormalLarge", "TOPLEFT", baseFrame, "TOPLEFT", 250, -35, "Total Entries: ")
+end
+local function AddSecondTab(baseFrame)
+    AddStatisticsText(baseFrame)
+    AddDiagramPlaceholders(baseFrame)
+end
 local function UpdateTabVisibility(selectedTab, bgFrame)
     local isHistoryTab = selectedTab == 1
     local isStatsTab = selectedTab == 2
@@ -179,97 +241,26 @@ local function UpdateTabVisibility(selectedTab, bgFrame)
         row:SetShown(isHistoryTab)
     end
 
-    bgFrame.statsTitle:SetShown(isStatsTab)
-    bgFrame.averageKillsText:SetShown(isStatsTab)
+    bgFrame.categoryHeader:SetShown(isStatsTab)
+    bgFrame.averageKillingBlowsText:SetShown(isStatsTab)
+    bgFrame.averageHonorableKillsText:SetShown(isStatsTab)
     bgFrame.averageDeathsText:SetShown(isStatsTab)
+    bgFrame.averageDurationText:SetShown(isStatsTab)
+    bgFrame.averageHonourText:SetShown(isStatsTab)
+
+    bgFrame.totalsCategoryHeader:SetShown(isStatsTab)
     bgFrame.winRateText:SetShown(isStatsTab)
+    bgFrame.totalKillsText:SetShown(isStatsTab)
+    bgFrame.totalDeathsText:SetShown(isStatsTab)
+    bgFrame.totalHonorableKillsText:SetShown(isStatsTab)
+    bgFrame.timeInsideText:SetShown(isStatsTab)
+    bgFrame.totalHonorGained:SetShown(isStatsTab)
+    bgFrame.totalEntries:SetShown(isStatsTab)
 
-    if isStatsTab then
-        local avgKills, avgDeaths, winRate = CalculateBattlegroundStats()
-        bgFrame.averageKillsText:SetText("Average Kills: " .. string.format("%.2f", avgKills))
-        bgFrame.averageDeathsText:SetText("Average Deaths: " .. string.format("%.2f", avgDeaths))
-        bgFrame.winRateText:SetText("Win Rate: " .. string.format("%.2f%%", winRate))
-    end
+    bgFrame.lineChartPlaceholder:SetShown(isStatsTab)
+    bgFrame.classDistributionPlaceholder:SetShown(isStatsTab)
 end
-
-function FRAME_UI.UpdateBattlegroundHistoryFrame(battleGroundFrame)
-    -- Clear existing rows
-    for i, row in ipairs(battleGroundFrame.rows or {}) do
-        row:Hide()
-    end
-    battleGroundFrame.rows = battleGroundFrame.rows or {}
-
-    local rowHeight = 20
-    local columnWidth = 120
-
-    for i, bg in ipairs(PVP_HISTORY) do
-        local row = battleGroundFrame.rows[i]
-        if not row then
-            row = CreateFrame("Frame", nil, battleGroundFrame.scrollChild)
-            row:SetSize(600, rowHeight)
-            row:SetPoint("TOPLEFT", 10, -(i - 1) * rowHeight)
-            battleGroundFrame.rows[i] = row
-
-            -- Create text elements for each column in the row
-            row.startTime = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            row.startTime:SetPoint("LEFT", 0, 0)
-            row.startTime:SetSize(columnWidth, rowHeight)
-
-            row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            row.name:SetPoint("LEFT", row.startTime, "RIGHT", 0, 0)
-            row.name:SetSize(columnWidth, rowHeight)
-
-            row.kills = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            row.kills:SetPoint("LEFT", row.name, "RIGHT", 0, 0)
-            row.kills:SetSize(columnWidth, rowHeight)
-
-            row.deaths = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            row.deaths:SetPoint("LEFT", row.kills, "RIGHT", 0, 0)
-            row.deaths:SetSize(columnWidth, rowHeight)
-
-            row.duration = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            row.duration:SetPoint("LEFT", row.deaths, "RIGHT", 0, 0)
-            row.duration:SetSize(columnWidth, rowHeight)
-
-            row.outcome = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            row.outcome:SetPoint("LEFT", row.duration, "RIGHT", 0, 0)
-            row.outcome:SetSize(columnWidth, rowHeight)
-        end
-
-        -- Set text for each column
-        row.startTime:SetText(bg.date)
-        row.name:SetText(bg.name)
-        row.kills:SetText(bg.kills)
-        row.deaths:SetText(bg.deaths)
-        row.duration:SetText(bg.durationText)
-        row.outcome:SetText(bg.outcome)
-
-        -- Color coding for outcome
-        if bg.outcome == "Victory" then
-            row.outcome:SetTextColor(0, 1, 0)  -- Green for victory
-        elseif bg.outcome == "Defeat" then
-            row.outcome:SetTextColor(1, 0, 0)  -- Red for defeat
-        else
-            row.outcome:SetTextColor(1, 1, 1)  -- Default color
-        end
-
-        row:Show()
-    end
-end
-
-function FRAME_UI.CreateBattlegroundHistoryFrame(baseFrame)
-    baseFrame:SetSize(755, 360)  -- Width, Height
-    baseFrame:SetPoint("CENTER")  -- Position on the screen
-    baseFrame:SetResizable(true)  -- Enable resizing
-    baseFrame:SetResizeBounds(755, 100, 755, 800)
-
-    baseFrame.title = baseFrame:CreateFontString(nil, "OVERLAY")
-    baseFrame.title:SetFontObject("GameFontHighlight")
-    baseFrame.title:SetPoint("LEFT", baseFrame.TitleBg, "LEFT", 5, 0)
-    baseFrame.title:SetText("Battleground History")
-
-
-    -- Create a resize handle
+local function AddResizeHandler(baseFrame)
     local resizeHandle = CreateFrame("Button", nil, baseFrame)
     resizeHandle:SetPoint("BOTTOMRIGHT", baseFrame, "BOTTOMRIGHT", 0, 0)
     resizeHandle:SetSize(16, 16)
@@ -285,10 +276,125 @@ function FRAME_UI.CreateBattlegroundHistoryFrame(baseFrame)
 
     resizeHandle:SetScript("OnMouseUp", function(self, button)
         baseFrame:StopMovingOrSizing()
-        -- Update any necessary layout or content due to the size change
     end)
 
+    resizeHandle:SetScript("OnEnter", function(self)
+        SetCursor("Interface\\CURSOR\\openhandglow")
+    end)
+
+    resizeHandle:SetScript("OnLeave", function(self)
+        ResetCursor()
+    end)
+
+end
+local function GetFilteredHistory(totalHistory)
+    return totalHistory
+end
+function FRAME_UI.UpdateBattlegroundHistoryFrame(battleGroundFrame)
+    UpdateTabVisibility(battleGroundFrame.selectedTab, battleGroundFrame)
+    local isHistoryTab = battleGroundFrame.selectedTab == 1
+    local isStatsTab = battleGroundFrame.selectedTab == 2
+    if isHistoryTab then
+        -- Clear existing rows
+        for i, row in ipairs(battleGroundFrame.rows or {}) do
+            row:Hide()
+        end
+        battleGroundFrame.rows = battleGroundFrame.rows or {}
+
+        local rowHeight = 20
+        local columnWidth = 120
+
+        for i, bg in ipairs(GetFilteredHistory(PVP_HISTORY)) do
+            local row = battleGroundFrame.rows[i]
+            if not row then
+                row = CreateFrame("Frame", nil, battleGroundFrame.scrollChild)
+                row:SetSize(600, rowHeight)
+                row:SetPoint("TOPLEFT", 10, -(i - 1) * rowHeight)
+                battleGroundFrame.rows[i] = row
+
+                -- Create text elements for each column in the row
+                row.startTime = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.startTime:SetPoint("LEFT", 0, 0)
+                row.startTime:SetSize(columnWidth, rowHeight)
+
+                row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.name:SetPoint("LEFT", row.startTime, "RIGHT", 0, 0)
+                row.name:SetSize(columnWidth, rowHeight)
+
+                row.kills = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.kills:SetPoint("LEFT", row.name, "RIGHT", 0, 0)
+                row.kills:SetSize(columnWidth, rowHeight)
+
+                row.deaths = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.deaths:SetPoint("LEFT", row.kills, "RIGHT", 0, 0)
+                row.deaths:SetSize(columnWidth, rowHeight)
+
+                row.duration = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.duration:SetPoint("LEFT", row.deaths, "RIGHT", 0, 0)
+                row.duration:SetSize(columnWidth, rowHeight)
+
+                row.outcome = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.outcome:SetPoint("LEFT", row.duration, "RIGHT", 0, 0)
+                row.outcome:SetSize(columnWidth, rowHeight)
+            end
+
+            -- Set text for each column
+            row.startTime:SetText(bg.date)
+            row.name:SetText(bg.name)
+            row.kills:SetText(bg.kills)
+            row.deaths:SetText(bg.deaths)
+            row.duration:SetText(bg.durationText)
+            row.outcome:SetText(bg.outcome)
+
+            -- Color coding for outcome
+            if bg.outcome == "Victory" then
+                row.outcome:SetTextColor(0, 1, 0)  -- Green for victory
+            elseif bg.outcome == "Defeat" then
+                row.outcome:SetTextColor(1, 0, 0)  -- Red for defeat
+            else
+                row.outcome:SetTextColor(1, 1, 1)  -- Default color
+            end
+
+            row:Show()
+        end
+    elseif isStatsTab then
+        local avgKills, avgDeaths, avgHonorableKills, avgDuration, winRate, totalKills, totalDeaths, totalHonorableKills, totalTimeInside, totalEntries, avgHonour, totalHonour = CalculateBattlegroundStatsAndTotals(GetFilteredHistory(PVP_HISTORY))
+
+        -- Format duration as minutes:seconds
+        local avgDurationFormatted = string.format("%d:%02d", math.floor(avgDuration / 60), avgDuration % 60)
+        battleGroundFrame.totalEntries:SetText("Total Entries: " .. totalEntries)
+
+        battleGroundFrame.averageKillingBlowsText:SetText("Killing Blows: " .. string.format("%.2f", avgKills))
+        battleGroundFrame.averageHonorableKillsText:SetText("Honorable Kills: " .. string.format("%.2f", avgHonorableKills))
+        battleGroundFrame.averageDeathsText:SetText("Deaths: " .. string.format("%.2f", avgDeaths))
+        battleGroundFrame.averageDurationText:SetText("Duration: " .. avgDurationFormatted)
+        battleGroundFrame.averageHonourText:SetText("Honor: " .. avgHonour)
+
+        battleGroundFrame.winRateText:SetText("Winrate: " .. string.format("%.2f%%", winRate))
+        battleGroundFrame.totalKillsText:SetText("Kills: " .. totalKills)
+        battleGroundFrame.totalDeathsText:SetText("Deaths: " .. totalDeaths)
+        battleGroundFrame.totalHonorableKillsText:SetText("Honorable Kills: " .. totalHonorableKills)
+        battleGroundFrame.timeInsideText:SetText("Time Inside: " .. FormatTime(totalTimeInside))  -- FormatTime should convert seconds to a readable format
+        battleGroundFrame.totalHonorGained:SetText("Honour: " .. totalHonour)  -- FormatTime should convert seconds to a readable format
+    end
+
+end
+function FRAME_UI.CreateBattlegroundHistoryFrame(baseFrame)
+    baseFrame:SetSize(755, 400)  -- Width, Height
+    baseFrame:SetPoint("CENTER")  -- Position on the screen
+    baseFrame:SetResizable(true)  -- Enable resizing
+    baseFrame:SetResizeBounds(755, 400, 755, 800) -- Minimum Resize Bounds
+
+    baseFrame.title = baseFrame:CreateFontString(nil, "OVERLAY")
+    baseFrame.title:SetFontObject("GameFontHighlight")
+    baseFrame.title:SetPoint("LEFT", baseFrame.TitleBg, "LEFT", 5, 0)
+    baseFrame.title:SetText("Battleground History")
+
+    -- Create a resize handle
+    AddResizeHandler(baseFrame)
+
     -- Add sorting functionality to headers here
+    AddSortingFunctions(baseFrame)
 
     baseFrame.scrollFrame = CreateFrame("ScrollFrame", nil, baseFrame, "UIPanelScrollFrameTemplate")
     baseFrame.scrollFrame:SetPoint("TOPLEFT", 10, -60)
@@ -297,49 +403,6 @@ function FRAME_UI.CreateBattlegroundHistoryFrame(baseFrame)
     baseFrame.scrollChild = CreateFrame("Frame", nil, baseFrame.scrollFrame)
     baseFrame.scrollChild:SetSize(470, 340)  -- Scroll child size
     baseFrame.scrollFrame:SetScrollChild(baseFrame.scrollChild)
-
-    -- Create rows for data display here
-    dateHeader:SetScript("OnClick", function()
-        SORT_DIRECTION = SORT_DIRECTION == "ASC" and "DESC" or "ASC"
-        table.sort(PVP_HISTORY, SortByDate)
-        UpdateSortArrows(dateHeader)
-        FRAME_UI.UpdateBattlegroundHistoryFrame(baseFrame)
-    end)
-
-    nameHeader:SetScript("OnClick", function()
-        SORT_DIRECTION = SORT_DIRECTION == "ASC" and "DESC" or "ASC"
-        table.sort(PVP_HISTORY, SortByName)
-        UpdateSortArrows(nameHeader)
-        FRAME_UI. UpdateBattlegroundHistoryFrame(baseFrame)
-    end)
-
-    killsHeader:SetScript("OnClick", function()
-        SORT_DIRECTION = SORT_DIRECTION == "ASC" and "DESC" or "ASC"
-        table.sort(PVP_HISTORY, SortByKills)
-        UpdateSortArrows(killsHeader)
-        FRAME_UI.UpdateBattlegroundHistoryFrame(baseFrame)
-    end)
-
-    deathsHeader:SetScript("OnClick", function()
-        SORT_DIRECTION = SORT_DIRECTION == "ASC" and "DESC" or "ASC"
-        table.sort(PVP_HISTORY, SortByDeaths)
-        UpdateSortArrows(deathsHeader)
-        FRAME_UI.UpdateBattlegroundHistoryFrame(baseFrame)
-    end)
-
-    durationHeader:SetScript("OnClick", function()
-        SORT_DIRECTION = SORT_DIRECTION == "ASC" and "DESC" or "ASC"
-        table.sort(PVP_HISTORY, SortByDuration)
-        UpdateSortArrows(durationHeader)
-        FRAME_UI.UpdateBattlegroundHistoryFrame(baseFrame)
-    end)
-
-    outcomeHeader:SetScript("OnClick", function()
-        SORT_DIRECTION = SORT_DIRECTION == "ASC" and "DESC" or "ASC"
-        table.sort(PVP_HISTORY, SortByOutCome)
-        UpdateSortArrows(outcomeHeader)
-        FRAME_UI.UpdateBattlegroundHistoryFrame(baseFrame)
-    end)
 
     baseFrame:SetMovable(true)
     baseFrame:EnableMouse(true)
@@ -368,22 +431,25 @@ function FRAME_UI.CreateBattlegroundHistoryFrame(baseFrame)
     -- Tab Scripts
     tab1:SetScript("OnClick", function()
         PanelTemplates_SetTab(baseFrame, 1)
-        UpdateTabVisibility(1,baseFrame)
+        baseFrame.selectedTab = 1
+        FRAME_UI.UpdateBattlegroundHistoryFrame(baseFrame)
     end)
     tab2:SetScript("OnClick", function()
         PanelTemplates_SetTab(baseFrame, 2)
-        UpdateTabVisibility(2,baseFrame)
+        FRAME_UI.UpdateBattlegroundHistoryFrame(baseFrame)
+        baseFrame.selectedTab = 2
     end)
     tab3:SetScript("OnClick", function()
         PanelTemplates_SetTab(baseFrame, 3)
-        UpdateTabVisibility(3,baseFrame)
+        FRAME_UI.UpdateBattlegroundHistoryFrame(baseFrame)
+        baseFrame.selectedTab = 3
     end)
+    baseFrame.selectedTab = 1
 
     -- Initialize Tabs
     PanelTemplates_SetNumTabs(baseFrame, 3)
     PanelTemplates_SetTab(baseFrame, 1)
-    UpdateTabVisibility(1,baseFrame)
-
+    UpdateTabVisibility(1, baseFrame)
 
     tinsert(UISpecialFrames, baseFrame:GetName())
     baseFrame:Hide()  -- Hide the frame initially
