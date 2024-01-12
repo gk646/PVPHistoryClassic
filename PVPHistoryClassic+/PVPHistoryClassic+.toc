@@ -1,9 +1,10 @@
 ## Interface: 11500
-## Title: PVPHistory+
+## Title: PVPHistoryClassic+
 ## Notes: Saves your battleground data and makes it accessible to view
 ## Version: 0.1
 ## Author: gk646
 ## SavedVariablesPerCharacter: PVP_HISTORY
 
+FrameUI.lua
 PVPTracker.lua
 Main.lua
