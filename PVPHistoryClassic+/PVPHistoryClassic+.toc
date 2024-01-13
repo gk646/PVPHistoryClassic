@@ -6,8 +6,7 @@
 ## SavedVariables: PVP_HISTORY
 ## SavedVariablesPerCharacter: MinimapButtonDB
 
-LibGPIToolBox.lua
-LibGPIOptions.lua
+
 LibGPIMinimapButton.lua
 FrameUI.lua
 PVPTracker.lua

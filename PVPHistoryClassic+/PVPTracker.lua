@@ -4,6 +4,7 @@ PVP_TRACKER = {}
 local CURRENT_BATTLEGROUND
 local BATTLEGROUND_START_TIME = nil
 local PLAYER_FACTION = nil
+local IS_FIRST_ZONE = true
 
 local function IsBattlegroundZone(zoneName)
     return zoneName == "Warsong Gulch" or zoneName == "Arathi Basin" or zoneName == "Alterac Valley"
@@ -36,6 +37,9 @@ function PVP_TRACKER.OnCombatLogEventUnfiltered()
 end
 
 local function StartBattleground(zoneName)
+    local playerName = UnitName("player")
+    local _, playerClass = UnitClass("player")
+
     CURRENT_BATTLEGROUND = {
         name = zoneName,
         date = date("%Y-%m-%d %H:%M"),
@@ -48,7 +52,9 @@ local function StartBattleground(zoneName)
         honorGained = 0,
         killingBlows = 0,
         currentRank = 0,
-        teamComposition = { Horde = {}, Alliance = {} }
+        teamComposition = { Horde = {}, Alliance = {} },
+        playerName = playerName,
+        playerClass = playerClass
     }
     BATTLEGROUND_START_TIME = GetTime()
 end
@@ -70,7 +76,6 @@ FRAME_UI.UpdateBattlegroundHistoryFrame(battlegroundHistoryFrame)
 
 function PVP_TRACKER.OnUpdateBattlefieldStatus(battleFieldIndex)
     local status, mapName, instanceID = GetBattlefieldStatus(battleFieldIndex)
-    print(status)
 
     if status == "active" and CURRENT_BATTLEGROUND and CURRENT_BATTLEGROUND.name == mapName then
         local winner = GetBattlefieldWinner()
@@ -138,7 +143,13 @@ end
 function PVP_TRACKER.OnPlayerChangingZone()
     local zoneName = GetRealZoneText()
     if IsBattlegroundZone(zoneName) then
-        frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        if IS_FIRST_ZONE then 
+            local lastEntry = PVP_HISTORY[#PVP_HISTORY]
+            if lastEntry.outcome == "In Progress" then
+                CURRENT_BATTLEGROUND = lastEntry
+                return
+            end
+        end
         if CURRENT_BATTLEGROUND then
             PVP_TRACKER.UpdateBattlegroundStats()
             EndBattleground()
@@ -147,11 +158,11 @@ function PVP_TRACKER.OnPlayerChangingZone()
             StartBattleground(zoneName)
         end
     else
-        frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
         if CURRENT_BATTLEGROUND then
             PVP_TRACKER.UpdateBattlegroundStats()
             EndBattleground()
         end
     end
+    IS_FIRST_ZONE = false
 end
 

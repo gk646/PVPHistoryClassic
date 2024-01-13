@@ -87,21 +87,24 @@ local function FormatTime(totalSeconds)
     end
 end
 
-local width = 125
-local dateHeader = CreateTableHeader(frame, width, 20, "Date", "TOPLEFT", frame, "TOPLEFT", 10, -30)
-local nameHeader = CreateTableHeader(frame, width, 20, "Zone", "LEFT", dateHeader, "RIGHT", 0, 0)
-local killsHeader = CreateTableHeader(frame, width, 20, "Kills", "LEFT", nameHeader, "RIGHT", 0, 0)
-local deathsHeader = CreateTableHeader(frame, width, 20, "Deaths", "LEFT", killsHeader, "RIGHT", -5, 0)
-local durationHeader = CreateTableHeader(frame, width, 20, "Duration", "LEFT", deathsHeader, "RIGHT", -10, 0)
-local outcomeHeader = CreateTableHeader(frame, width, 20, "Outcome", "LEFT", durationHeader, "RIGHT", -10, 0)
+local width = 110  -- Reduced width for most columns
+local smallWidth = 70  -- Even smaller width for some columns to fit new columns
+
+local dateHeader = CreateTableHeader(frame, 120, 20, "Date", "TOPLEFT", frame, "TOPLEFT", 5, -30)
+local nameHeader = CreateTableHeader(frame, width, 20, "Zone", "LEFT", dateHeader, "RIGHT", 10, 0)
+local killsHeader = CreateTableHeader(frame, smallWidth, 20, "Kills", "LEFT", nameHeader, "RIGHT", 5, 0)
+local hkHeader = CreateTableHeader(frame, smallWidth, 20, "HKs", "LEFT", killsHeader, "RIGHT", 0, 0)
+local deathsHeader = CreateTableHeader(frame, smallWidth, 20, "Deaths", "LEFT", hkHeader, "RIGHT", 0, 0)
+local honorHeader = CreateTableHeader(frame, smallWidth+5, 20, "Honour", "LEFT", deathsHeader, "RIGHT", 0, 0) 
+local durationHeader = CreateTableHeader(frame, width-8, 20, "Duration", "LEFT", honorHeader, "RIGHT", 0, 0)
+local outcomeHeader = CreateTableHeader(frame, width, 20, "Outcome", "LEFT", durationHeader, "RIGHT", 0, 0)
 
 
+-- Update the function for hiding and showing arrows
 local function UpdateSortArrows(header)
-    -- Hide all arrows and show the one on the active header
-    for _, h in pairs({ dateHeader, nameHeader, killsHeader, deathsHeader, durationHeader }) do
+    for _, h in pairs({ dateHeader, nameHeader, killsHeader, deathsHeader, hkHeader, honorHeader, durationHeader, outcomeHeader }) do
         h.arrow:Hide()
     end
-
     header.arrow:Show()
     if SORT_DIRECTION == "ASC" then
         header.arrow:SetTexCoord(0, 0.56, 0, 1)
@@ -117,6 +120,15 @@ local function AddSortingFunctions(baseFrame)
         end)
         FRAME_UI.UpdateBattlegroundHistoryFrame(baseFrame)
     end
+    hkHeader:SetScript("OnClick", function()
+        SortData("honorableKills", true)
+        UpdateSortArrows(hkHeader)
+    end)
+    honorHeader:SetScript("OnClick", function()
+        SortData("honorGained", true)
+        UpdateSortArrows(honorHeader)
+    end)
+
     dateHeader:SetScript("OnClick", function()
         SortData("date", false)
         UpdateSortArrows(dateHeader)
@@ -205,7 +217,7 @@ local function AddStatisticsText(baseFrame)
     -- Averages per Match Category
     baseFrame.categoryHeader = CreateTextString(baseFrame, "GameFontNormalLarge", "TOPLEFT", baseFrame, "TOPLEFT", 20, -40, "Averages per Match:")
     baseFrame.averageKillingBlowsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.categoryHeader, "BOTTOMLEFT", indent, -10, "Average Killing Blows: ")
-    baseFrame.averageHonorableKillsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.averageKillingBlowsText, "BOTTOMLEFT", 0, -10, "Average Honorable Kills: ")
+    baseFrame.averageHonorableKillsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.averageKillingBlowsText, "BOTTOMLEFT", 0, -10, "Average Honourable Kills: ")
     baseFrame.averageDeathsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.averageHonorableKillsText, "BOTTOMLEFT", 0, -10, "Average Deaths: ")
     baseFrame.averageDurationText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.averageDeathsText, "BOTTOMLEFT", 0, -10, "Average Duration: ")
     baseFrame.averageHonourText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.averageDurationText, "BOTTOMLEFT", 0, -10, "Average Honour: ")
@@ -215,9 +227,9 @@ local function AddStatisticsText(baseFrame)
     baseFrame.winRateText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.totalsCategoryHeader, "BOTTOMLEFT", indent, -10, "Winrate: ")
     baseFrame.totalKillsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.winRateText, "BOTTOMLEFT", 0, -10, "Kills: ")
     baseFrame.totalDeathsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.totalKillsText, "BOTTOMLEFT", 0, -10, "Deaths: ")
-    baseFrame.totalHonorableKillsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.totalDeathsText, "BOTTOMLEFT", 0, -10, "Honorable Kills: ")
+    baseFrame.totalHonorableKillsText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.totalDeathsText, "BOTTOMLEFT", 0, -10, "Honourable Kills: ")
     baseFrame.timeInsideText = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.totalHonorableKillsText, "BOTTOMLEFT", 0, -10, "Time Inside: ")
-    baseFrame.totalHonorGained = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.timeInsideText, "BOTTOMLEFT", 0, -10, "Honor: ")
+    baseFrame.totalHonorGained = CreateTextString(baseFrame, "GameFontNormal", "TOPLEFT", baseFrame.timeInsideText, "BOTTOMLEFT", 0, -10, "Honour: ")
 
     baseFrame.totalEntries = CreateTextString(baseFrame, "GameFontNormalLarge", "TOPLEFT", baseFrame, "TOPLEFT", 250, -35, "Total Entries: ")
 end
@@ -236,6 +248,8 @@ local function UpdateTabVisibility(selectedTab, bgFrame)
     deathsHeader:SetShown(isHistoryTab)
     durationHeader:SetShown(isHistoryTab)
     outcomeHeader:SetShown(isHistoryTab)
+    hkHeader:SetShown(isHistoryTab)
+    honorHeader:SetShown(isHistoryTab)
 
     for i, row in ipairs(bgFrame.rows or {}) do
         row:SetShown(isHistoryTab)
@@ -302,40 +316,48 @@ function FRAME_UI.UpdateBattlegroundHistoryFrame(battleGroundFrame)
         battleGroundFrame.rows = battleGroundFrame.rows or {}
 
         local rowHeight = 20
-        local columnWidth = 120
+        local smallWidth = 70
 
         for i, bg in ipairs(GetFilteredHistory(PVP_HISTORY)) do
             local row = battleGroundFrame.rows[i]
             if not row then
                 row = CreateFrame("Frame", nil, battleGroundFrame.scrollChild)
-                row:SetSize(600, rowHeight)
+                row:SetSize(755, rowHeight)
                 row:SetPoint("TOPLEFT", 10, -(i - 1) * rowHeight)
                 battleGroundFrame.rows[i] = row
 
                 -- Create text elements for each column in the row
                 row.startTime = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 row.startTime:SetPoint("LEFT", 0, 0)
-                row.startTime:SetSize(columnWidth, rowHeight)
+                row.startTime:SetSize(120, rowHeight)
 
                 row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 row.name:SetPoint("LEFT", row.startTime, "RIGHT", 0, 0)
-                row.name:SetSize(columnWidth, rowHeight)
+                row.name:SetSize(110, rowHeight)
 
                 row.kills = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 row.kills:SetPoint("LEFT", row.name, "RIGHT", 0, 0)
-                row.kills:SetSize(columnWidth, rowHeight)
+                row.kills:SetSize(smallWidth, rowHeight)
+
+                row.honorableKills = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.honorableKills:SetPoint("LEFT", row.kills, "RIGHT", 0, 0)
+                row.honorableKills:SetSize(smallWidth, rowHeight)
 
                 row.deaths = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                row.deaths:SetPoint("LEFT", row.kills, "RIGHT", 0, 0)
-                row.deaths:SetSize(columnWidth, rowHeight)
+                row.deaths:SetPoint("LEFT", row.honorableKills, "RIGHT", 0, 0)
+                row.deaths:SetSize(smallWidth, rowHeight)
+
+                row.honorGained = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.honorGained:SetPoint("LEFT", row.deaths, "RIGHT", 0, 0)
+                row.honorGained:SetSize(smallWidth+5, rowHeight)
 
                 row.duration = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                row.duration:SetPoint("LEFT", row.deaths, "RIGHT", 0, 0)
-                row.duration:SetSize(columnWidth, rowHeight)
+                row.duration:SetPoint("LEFT", row.honorGained, "RIGHT", 0, 0)
+                row.duration:SetSize(102, rowHeight)
 
                 row.outcome = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 row.outcome:SetPoint("LEFT", row.duration, "RIGHT", 0, 0)
-                row.outcome:SetSize(columnWidth, rowHeight)
+                row.outcome:SetSize(110, rowHeight)
             end
 
             -- Set text for each column
@@ -345,6 +367,8 @@ function FRAME_UI.UpdateBattlegroundHistoryFrame(battleGroundFrame)
             row.deaths:SetText(bg.deaths)
             row.duration:SetText(bg.durationText)
             row.outcome:SetText(bg.outcome)
+            row.honorableKills:SetText(bg.honorableKills or "")
+            row.honorGained:SetText(bg.honorGained or "")
 
             -- Color coding for outcome
             if bg.outcome == "Victory" then
@@ -365,15 +389,15 @@ function FRAME_UI.UpdateBattlegroundHistoryFrame(battleGroundFrame)
         battleGroundFrame.totalEntries:SetText("Total Entries: " .. totalEntries)
 
         battleGroundFrame.averageKillingBlowsText:SetText("Killing Blows: " .. string.format("%.2f", avgKills))
-        battleGroundFrame.averageHonorableKillsText:SetText("Honorable Kills: " .. string.format("%.2f", avgHonorableKills))
+        battleGroundFrame.averageHonorableKillsText:SetText("Honourable Kills: " .. string.format("%.2f", avgHonorableKills))
         battleGroundFrame.averageDeathsText:SetText("Deaths: " .. string.format("%.2f", avgDeaths))
         battleGroundFrame.averageDurationText:SetText("Duration: " .. avgDurationFormatted)
-        battleGroundFrame.averageHonourText:SetText("Honor: " .. avgHonour)
+        battleGroundFrame.averageHonourText:SetText("Honour: " .. avgHonour)
 
         battleGroundFrame.winRateText:SetText("Winrate: " .. string.format("%.2f%%", winRate))
         battleGroundFrame.totalKillsText:SetText("Kills: " .. totalKills)
         battleGroundFrame.totalDeathsText:SetText("Deaths: " .. totalDeaths)
-        battleGroundFrame.totalHonorableKillsText:SetText("Honorable Kills: " .. totalHonorableKills)
+        battleGroundFrame.totalHonorableKillsText:SetText("Honourable Kills: " .. totalHonorableKills)
         battleGroundFrame.timeInsideText:SetText("Time Inside: " .. FormatTime(totalTimeInside))  -- FormatTime should convert seconds to a readable format
         battleGroundFrame.totalHonorGained:SetText("Honour: " .. totalHonour)  -- FormatTime should convert seconds to a readable format
     end
