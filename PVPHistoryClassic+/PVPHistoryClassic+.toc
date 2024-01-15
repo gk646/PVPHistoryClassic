@@ -1,7 +1,7 @@
 ## Interface: 11500
 ## Title: PVPHistoryClassic+
 ## Notes: Saves your battleground data and makes it accessible to view
-## Version: 1.0
+## Version: 1.1
 ## Author: gk646
 ## SavedVariables: PVP_HISTORY
 ## SavedVariablesPerCharacter: MinimapButtonDB

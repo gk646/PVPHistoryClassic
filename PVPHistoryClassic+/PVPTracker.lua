@@ -1,15 +1,16 @@
 PVP_HISTORY = PVP_HISTORY or {}
 
 PVP_TRACKER = {}
+PVP_TRACKER.PLAYER_FACTION_STRING = UnitFactionGroup("player")
+
 local CURRENT_BATTLEGROUND
 local BATTLEGROUND_START_TIME = nil
-local PLAYER_FACTION = nil
+local TEMPORARY_PLAYER_FACTION = nil
 local IS_FIRST_ZONE = true
 
 local function IsBattlegroundZone(zoneName)
     return zoneName == "Warsong Gulch" or zoneName == "Arathi Basin" or zoneName == "Alterac Valley"
 end
-
 local function SaveTeamComposition()
     local playerName = UnitName("player")
     for i = 1, GetNumBattlefieldScores() do
@@ -30,12 +31,10 @@ local function SaveTeamComposition()
         end
     end
 end
-
 function PVP_TRACKER.OnCombatLogEventUnfiltered()
     -- Logic to detect honor kills and estimate honor gains
     -- Update CURRENT_BATTLEGROUND.honorGained
 end
-
 local function StartBattleground(zoneName)
     local playerName = UnitName("player")
     local _, playerClass = UnitClass("player")
@@ -58,7 +57,6 @@ local function StartBattleground(zoneName)
     }
     BATTLEGROUND_START_TIME = GetTime()
 end
-
 local function EndBattleground()
     if CURRENT_BATTLEGROUND then
         local endTimeInSeconds = GetTime()
@@ -71,7 +69,7 @@ local function EndBattleground()
     end
 end
 
-local battlegroundHistoryFrame = FRAME_UI.CreateBattlegroundHistoryFrame(frame)
+battlegroundHistoryFrame = FRAME_UI.CreateBattlegroundHistoryFrame(frame)
 FRAME_UI.UpdateBattlegroundHistoryFrame(battlegroundHistoryFrame)
 
 function PVP_TRACKER.OnUpdateBattlefieldStatus(battleFieldIndex)
@@ -85,7 +83,6 @@ function PVP_TRACKER.OnUpdateBattlefieldStatus(battleFieldIndex)
         end
     end
 end
-
 function PVP_TRACKER.UpdateBattlegroundStats()
     if CURRENT_BATTLEGROUND then
         local playerName = UnitName("player")
@@ -99,7 +96,7 @@ function PVP_TRACKER.UpdateBattlegroundStats()
                 CURRENT_BATTLEGROUND.honorableKills = honorableKills
                 CURRENT_BATTLEGROUND.honorGained = honorGained
                 CURRENT_BATTLEGROUND.currentRank = rank
-                PLAYER_FACTION = faction
+                TEMPORARY_PLAYER_FACTION = faction
                 break
             end
         end
@@ -107,9 +104,9 @@ function PVP_TRACKER.UpdateBattlegroundStats()
         local winner = GetBattlefieldWinner()
         if winner and CURRENT_BATTLEGROUND.outcome == "In Progress" then
             SaveTeamComposition()
-            if (winner == 0 and PLAYER_FACTION == 0) or (winner == 1 and PLAYER_FACTION == 1) then
+            if (winner == 0 and TEMPORARY_PLAYER_FACTION == 0) or (winner == 1 and TEMPORARY_PLAYER_FACTION == 1) then
                 CURRENT_BATTLEGROUND.outcome = "Victory"
-            elseif (winner == 0 and PLAYER_FACTION == 1) or (winner == 1 and PLAYER_FACTION == 0) then
+            elseif (winner == 0 and TEMPORARY_PLAYER_FACTION == 1) or (winner == 1 and TEMPORARY_PLAYER_FACTION == 0) then
                 CURRENT_BATTLEGROUND.outcome = "Defeat"
             elseif winner == 255 then
                 CURRENT_BATTLEGROUND.outcome = "Draw"
@@ -129,6 +126,7 @@ function PVP_TRACKER.ToggleBattlegroundHistory()
         battlegroundHistoryFrame:Show()
     end
 end
+
 -- Add a slash command to toggle the battleground history frame
 SLASH_PVPHISTORY1 = "/pvphistory"
 SlashCmdList[SLASH_PVPHISTORY1] = PVP_TRACKER.ToggleBattlegroundHistory
@@ -139,11 +137,10 @@ function PVP_TRACKER.OnPlayerLogout()
         EndBattleground()
     end
 end
-
 function PVP_TRACKER.OnPlayerChangingZone()
     local zoneName = GetRealZoneText()
     if IsBattlegroundZone(zoneName) then
-        if IS_FIRST_ZONE then 
+        if IS_FIRST_ZONE then
             local lastEntry = PVP_HISTORY[#PVP_HISTORY]
             if lastEntry.outcome == "In Progress" then
                 CURRENT_BATTLEGROUND = lastEntry

@@ -2,6 +2,31 @@ FRAME_UI = {}
 
 frame = CreateFrame("Frame", "BattlegroundHistoryFrame", UIParent, "BasicFrameTemplateWithInset")
 local SORT_DIRECTION = "ASC"  -- Global variable to toggle sorting direction
+local CLASS_DIST_FACTION = UnitFactionGroup("player")
+local CLASS_COLORS = {
+    ["Warrior"] = { r = 0.78, g = 0.61, b = 0.43 }, -- Brown
+    ["Paladin"] = { r = 0.96, g = 0.55, b = 0.73 }, -- Pink
+    ["Hunter"] = { r = 0.67, g = 0.83, b = 0.45 }, -- Green
+    ["Rogue"] = { r = 1.00, g = 0.96, b = 0.41 }, -- Yellow
+    ["Priest"] = { r = 1.00, g = 1.00, b = 1.00 }, -- White
+    ["Shaman"] = { r = 0.00, g = 0.44, b = 0.87 }, -- Blue
+    ["Mage"] = { r = 0.41, g = 0.80, b = 0.94 }, -- Light Blue
+    ["Warlock"] = { r = 0.58, g = 0.51, b = 0.79 }, -- Purple
+    ["Druid"] = { r = 1.00, g = 0.49, b = 0.04 }, -- Orange
+}
+
+local CLASS_LIST = {
+    "Warrior",
+    "Paladin",
+    "Hunter",
+    "Rogue",
+    "Priest",
+    "Shaman",
+    "Mage",
+    "Warlock",
+    "Druid",
+}
+
 local function CreateTextString(parent, font, point, relativeTo, relativePoint, xOff, yOff, text)
     local textString = parent:CreateFontString(nil, "OVERLAY", font)
     textString:SetPoint(point, relativeTo, relativePoint, xOff, yOff)
@@ -86,17 +111,52 @@ local function FormatTime(totalSeconds)
         return string.format("%02dh:%02dm", hours, minutes)
     end
 end
+local function OnFactionSelected(self, arg1, arg2, checked)
+    CLASS_DIST_FACTION = self.value
+    UIDropDownMenu_SetSelectedValue(battlegroundHistoryFrame.dropdown, CLASS_DIST_FACTION)
+    FRAME_UI.UpdateBattlegroundHistoryFrame(battlegroundHistoryFrame)
+    CloseDropDownMenus() -- Close the dropdown menu after selection
+end
+local function CreateFactionDropdown(baseFrame)
+    local dropdown = CreateFrame("Frame", "FactionDropdown", baseFrame, "UIDropDownMenuTemplate")
 
-local width = 110  -- Reduced width for most columns
-local smallWidth = 70  -- Even smaller width for some columns to fit new columns
+    -- Adjust the position to the left and vertically centered to the bar chart
+    local chartHeight = baseFrame.classBarChart:GetHeight()
+    dropdown:SetPoint("TOPLEFT", baseFrame.classBarChart, "TOPLEFT", -125, -chartHeight / 2)
+
+    local function InitializeDropdown(self, level)
+        local info = UIDropDownMenu_CreateInfo()
+        info.func = OnFactionSelected
+
+        info.text = "Horde"
+        info.value = "Horde"
+        info.checked = (CLASS_DIST_FACTION == "Horde")
+        UIDropDownMenu_AddButton(info, level)
+
+        info.text = "Alliance"
+        info.value = "Alliance"
+        info.checked = (CLASS_DIST_FACTION == "Alliance")
+        UIDropDownMenu_AddButton(info, level)
+    end
+
+    UIDropDownMenu_Initialize(dropdown, InitializeDropdown)
+    UIDropDownMenu_SetWidth(dropdown, 70)
+    UIDropDownMenu_SetButtonWidth(dropdown, 80)
+    UIDropDownMenu_SetSelectedValue(dropdown, CLASS_DIST_FACTION)
+    UIDropDownMenu_JustifyText(dropdown, "LEFT")
+    baseFrame.dropdown = dropdown
+
+end
+local width = 110
+local smallWidth = 70
 
 local dateHeader = CreateTableHeader(frame, 120, 20, "Date", "TOPLEFT", frame, "TOPLEFT", 5, -30)
 local nameHeader = CreateTableHeader(frame, width, 20, "Zone", "LEFT", dateHeader, "RIGHT", 10, 0)
 local killsHeader = CreateTableHeader(frame, smallWidth, 20, "Kills", "LEFT", nameHeader, "RIGHT", 5, 0)
 local hkHeader = CreateTableHeader(frame, smallWidth, 20, "HKs", "LEFT", killsHeader, "RIGHT", 0, 0)
 local deathsHeader = CreateTableHeader(frame, smallWidth, 20, "Deaths", "LEFT", hkHeader, "RIGHT", 0, 0)
-local honorHeader = CreateTableHeader(frame, smallWidth+5, 20, "Honour", "LEFT", deathsHeader, "RIGHT", 0, 0) 
-local durationHeader = CreateTableHeader(frame, width-8, 20, "Duration", "LEFT", honorHeader, "RIGHT", 0, 0)
+local honorHeader = CreateTableHeader(frame, smallWidth + 5, 20, "Honour", "LEFT", deathsHeader, "RIGHT", 0, 0)
+local durationHeader = CreateTableHeader(frame, width - 8, 20, "Duration", "LEFT", honorHeader, "RIGHT", 0, 0)
 local outcomeHeader = CreateTableHeader(frame, width, 20, "Outcome", "LEFT", durationHeader, "RIGHT", 0, 0)
 
 
@@ -163,8 +223,17 @@ local function AddSortingFunctions(baseFrame)
 end
 local function CalculateBattlegroundStatsAndTotals(filteredList)
     local totalKills, totalDeaths, totalWins, totalHonorableKills, totalDuration, totalBattles, totalHonorGained = 0, 0, 0, 0, 0, 0, 0
+    local classPercentages = { Horde = {}, Alliance = {} }
 
     for _, bg in ipairs(filteredList) do
+        classPercentages[PVP_TRACKER.PLAYER_FACTION_STRING][bg.playerClass] = (classPercentages[PVP_TRACKER.PLAYER_FACTION_STRING][bg.playerClass] or 0) + 1
+        for _, player in pairs(bg.teamComposition.Horde) do
+            classPercentages.Horde[player.class] = (classPercentages.Horde[player.class] or 0) + 1
+        end
+        for _, player in pairs(bg.teamComposition.Alliance) do
+            classPercentages.Alliance[player.class] = (classPercentages.Alliance[player.class] or 0) + 1
+        end
+
         totalBattles = totalBattles + 1
         totalHonorGained = totalHonorGained + (bg.honorGained or 0)
         totalKills = totalKills + (bg.kills or 0)
@@ -177,6 +246,16 @@ local function CalculateBattlegroundStatsAndTotals(filteredList)
         end
     end
 
+    local totalPlayersPerFaction = totalBattles * 10
+    for class, count in pairs(classPercentages.Horde) do
+        classPercentages.Horde[class] = (count / totalPlayersPerFaction) * 100
+    end
+
+    -- Calculate class percentages for Alliance
+    for class, count in pairs(classPercentages.Alliance) do
+        classPercentages.Alliance[class] = (count / totalPlayersPerFaction) * 100
+    end
+
     local avgKills = totalBattles > 0 and totalKills / totalBattles or 0
     local avgDeaths = totalBattles > 0 and totalDeaths / totalBattles or 0
     local avgHonorableKills = totalBattles > 0 and totalHonorableKills / totalBattles or 0
@@ -184,7 +263,51 @@ local function CalculateBattlegroundStatsAndTotals(filteredList)
     local winRate = totalBattles > 0 and (totalWins / totalBattles) * 100 or 0
     local avgHonor = totalHonorGained > 0 and totalHonorGained / totalBattles or 0
 
-    return avgKills, avgDeaths, avgHonorableKills, avgDuration, winRate, totalKills, totalDeaths, totalHonorableKills, totalDuration, totalBattles, avgHonor, totalHonorGained
+    return avgKills, avgDeaths, avgHonorableKills, avgDuration, winRate, totalKills, totalDeaths, totalHonorableKills, totalDuration, totalBattles, avgHonor, totalHonorGained, classPercentages
+end
+local function UpdateFactionBarChart(barChart, classPercentages)
+    local totalClasses = 8
+    local maxBarHeight = barChart:GetHeight() -- Maximum height of a bar
+    local chartWidth = barChart:GetWidth() -- Total width of the bar chart
+    local spacing = 5 -- Spacing between bars
+
+    -- Calculate the width of each bar dynamically
+    local barWidth = (chartWidth - (spacing * (totalClasses - 1))) / totalClasses
+    local faction = CLASS_DIST_FACTION -- "Horde" or "Alliance"
+
+    -- Clear existing bars if any
+    for _, bar in ipairs(barChart.bars or {}) do
+        bar:Hide()
+    end
+    barChart.bars = {}
+
+    local barCount = 0 -- Counter for the actual number of bars created
+
+    -- Create and position bars
+    for _, class in ipairs(CLASS_LIST) do
+        if not ((faction == "Alliance" and class == "Shaman") or (faction == "Horde" and class == "Paladin")) then
+            local percentage = classPercentages[faction][class] or 0
+            local barHeight = percentage * maxBarHeight / 100 -- Calculate height as a percentage
+
+            local bar = barChart:CreateTexture(nil, "BACKGROUND")
+            local classColor = CLASS_COLORS[class]
+            if classColor then
+                bar:SetColorTexture(classColor.r, classColor.g, classColor.b, 1)
+            else
+                bar:SetColorTexture(1, 1, 1, 1) -- Default color if class color is not found
+            end
+
+            bar:SetSize(barWidth, barHeight)
+
+            -- Calculate horizontal position based on actual number of bars created
+            local posX = (barCount * (barWidth + spacing)) - (chartWidth / 2) + (barWidth / 2)
+            bar:SetPoint("BOTTOM", barChart, "BOTTOM", posX, 0)
+
+            table.insert(barChart.bars, bar)
+
+            barCount = barCount + 1 -- Increment barCount only when a bar is created
+        end
+    end
 end
 local function AddDiagramPlaceholders(baseFrame)
     -- Line Chart Placeholder
@@ -193,23 +316,20 @@ local function AddDiagramPlaceholders(baseFrame)
     baseFrame.lineChartPlaceholder:SetPoint("TOPRIGHT", baseFrame, "TOPRIGHT", -30, -40)
     baseFrame.lineChartPlaceholder:Hide()  -- Initially hidden
 
-    -- Class Distribution Placeholder
-    baseFrame.classDistributionPlaceholder = CreateFrame("Frame", nil, baseFrame)
-    baseFrame.classDistributionPlaceholder:SetSize(250, 150)  -- Adjusted size
-    baseFrame.classDistributionPlaceholder:SetPoint("TOPRIGHT", baseFrame.lineChartPlaceholder, "BOTTOMRIGHT", 0, -30)
-    baseFrame.classDistributionPlaceholder:Hide()  -- Initially hidden
+    baseFrame.classBarChart = CreateFrame("Frame", nil, baseFrame)
+    baseFrame.classBarChart:SetSize(250, 150)  -- Adjusted size
+    baseFrame.classBarChart:SetPoint("TOPRIGHT", baseFrame.lineChartPlaceholder, "BOTTOMRIGHT", 0, -30)
+    baseFrame.classBarChart:Hide()  -- Initially hidden
 
-    -- Texture for Line Chart Placeholder
     local texture = baseFrame.lineChartPlaceholder:CreateTexture()
     texture:SetAllPoints(true)
     texture:SetColorTexture(0.3, 0.3, 0.3, 0.7)  -- Grey color
 
-    -- Texture for Class Distribution Placeholder
-    local texture2 = baseFrame.classDistributionPlaceholder:CreateTexture()
+    local texture2 = baseFrame.classBarChart:CreateTexture()
     texture2:SetAllPoints(true)
     texture2:SetColorTexture(0.3, 0.3, 0.3, 0.7)  -- Grey color
-end
 
+end
 local function AddStatisticsText(baseFrame)
     local indent = 20  -- Indentation for items within a category
     local categorySpacing = 30  -- Vertical space between categories
@@ -236,6 +356,7 @@ end
 local function AddSecondTab(baseFrame)
     AddStatisticsText(baseFrame)
     AddDiagramPlaceholders(baseFrame)
+    CreateFactionDropdown(baseFrame)
 end
 local function UpdateTabVisibility(selectedTab, bgFrame)
     local isHistoryTab = selectedTab == 1
@@ -272,7 +393,8 @@ local function UpdateTabVisibility(selectedTab, bgFrame)
     bgFrame.totalEntries:SetShown(isStatsTab)
 
     bgFrame.lineChartPlaceholder:SetShown(isStatsTab)
-    bgFrame.classDistributionPlaceholder:SetShown(isStatsTab)
+    bgFrame.classBarChart:SetShown(isStatsTab)
+    bgFrame.dropdown:SetShown(isStatsTab)
 end
 local function AddResizeHandler(baseFrame)
     local resizeHandle = CreateFrame("Button", nil, baseFrame)
@@ -349,7 +471,7 @@ function FRAME_UI.UpdateBattlegroundHistoryFrame(battleGroundFrame)
 
                 row.honorGained = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 row.honorGained:SetPoint("LEFT", row.deaths, "RIGHT", 0, 0)
-                row.honorGained:SetSize(smallWidth+5, rowHeight)
+                row.honorGained:SetSize(smallWidth + 5, rowHeight)
 
                 row.duration = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 row.duration:SetPoint("LEFT", row.honorGained, "RIGHT", 0, 0)
@@ -382,8 +504,9 @@ function FRAME_UI.UpdateBattlegroundHistoryFrame(battleGroundFrame)
             row:Show()
         end
     elseif isStatsTab then
-        local avgKills, avgDeaths, avgHonorableKills, avgDuration, winRate, totalKills, totalDeaths, totalHonorableKills, totalTimeInside, totalEntries, avgHonour, totalHonour = CalculateBattlegroundStatsAndTotals(GetFilteredHistory(PVP_HISTORY))
+        local avgKills, avgDeaths, avgHonorableKills, avgDuration, winRate, totalKills, totalDeaths, totalHonorableKills, totalTimeInside, totalEntries, avgHonour, totalHonour, classPercentages = CalculateBattlegroundStatsAndTotals(GetFilteredHistory(PVP_HISTORY))
 
+        UpdateFactionBarChart(battleGroundFrame.classBarChart, classPercentages)
         -- Format duration as minutes:seconds
         local avgDurationFormatted = string.format("%d:%02d", math.floor(avgDuration / 60), avgDuration % 60)
         battleGroundFrame.totalEntries:SetText("Total Entries: " .. totalEntries)
