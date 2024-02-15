@@ -34,6 +34,75 @@ local function CreateTextString(parent, font, point, relativeTo, relativePoint, 
     textString:Hide()  -- Initially hide the text
     return textString
 end
+
+local function CreateToggleDropdown(parent, name, items, point, relativeTo, relativePoint, xOffset, yOffset,width, displayName)
+    local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    label:SetPoint(point, relativeTo, relativePoint, xOffset, yOffset - 20) -- Position the label above the dropdown
+    label:SetText(displayName) 
+
+    
+    local dropdown = CreateFrame("Frame", name, parent, "UIDropDownMenuTemplate")
+    dropdown:SetPoint(point, relativeTo, relativePoint, xOffset, yOffset)
+    UIDropDownMenu_SetWidth(dropdown, width)
+    filter[name] = {}
+
+    UIDropDownMenu_Initialize(dropdown, function(self, level, menuList)
+        local info = UIDropDownMenu_CreateInfo()
+        info.isNotRadio = true
+        info.keepShownOnClick = true
+
+        for k, v in ipairs(items) do
+            info.text = v
+            info.checked = filter[name][v] 
+            info.func = function(self)
+                filter[name][v] = not filter[name][v] -- Toggle the checked state
+                self.checked = filter[name][v]
+            end
+            UIDropDownMenu_AddButton(info)
+        end
+    end)
+
+    return dropdown
+end
+
+local function AddNumericInputFieldWithToggle(parent, name, label, point, relativeTo, xOffset, yOffset)
+    -- Corrected: Removed the parent from the first argument
+    local labelFrame = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    labelFrame:SetPoint("TOPLEFT", relativeTo, "BOTTOMLEFT", xOffset, yOffset)
+    labelFrame:SetText(label)
+
+    local inputField = CreateFrame("EditBox", parent:GetName() .. name .. "Input", parent, "InputBoxTemplate")
+    inputField:SetSize(80, 20)  -- Adjusted size to make room for the toggle button
+    inputField:SetPoint("LEFT", labelFrame, "RIGHT", 10, 0)
+    inputField:SetAutoFocus(false)
+    inputField:SetNumeric(true)
+    inputField:SetScript("OnEnterPressed", function()
+        inputField:ClearFocus()
+        -- Store the numeric value along with its bound type (upper or lower)
+        filter[name] = { value = tonumber(inputField:GetText()), boundType = inputField.boundType }
+    end)
+
+    -- Initialize the bound type to lower ("<") by default
+    inputField.boundType = "<"
+
+    -- Toggle Button
+    local toggleButton = CreateFrame("Button", parent:GetName() .. name .. "ToggleButton", parent, "UIPanelButtonTemplate")
+    toggleButton:SetSize(20, 20)  -- Small button next to the input field
+    toggleButton:SetPoint("LEFT", inputField, "RIGHT", 5, 0)
+    toggleButton:SetText("<")
+    toggleButton:SetScript("OnClick", function()
+        if inputField.boundType == "<" then
+            inputField.boundType = ">"
+            toggleButton:SetText(">")
+        else
+            inputField.boundType = "<"
+            toggleButton:SetText("<")
+        end
+    end)
+    return inputField, toggleButton
+end
+
+
 local function GenericSort(a, b, key, isNumeric)
     if not a or not b or not a[key] or not b[key] then
         return false
@@ -147,6 +216,7 @@ local function CreateFactionDropdown(baseFrame)
     baseFrame.dropdown = dropdown
 
 end
+
 local width = 110
 local smallWidth = 70
 
@@ -172,6 +242,7 @@ local function UpdateSortArrows(header)
         header.arrow:SetTexCoord(0, 0.56, 1, 0)
     end
 end
+
 local function AddSortingFunctions(baseFrame)
     local function SortData(key, isNumeric)
         SORT_DIRECTION = SORT_DIRECTION == "ASC" and "DESC" or "ASC"
@@ -221,28 +292,31 @@ local function AddSortingFunctions(baseFrame)
         UpdateSortArrows(outcomeHeader)
     end)
 end
-local function CalculateBattlegroundStatsAndTotals(filteredList)
+
+local function CalculateBattlegroundStatsAndTotals(baseList)
     local totalKills, totalDeaths, totalWins, totalHonorableKills, totalDuration, totalBattles, totalHonorGained = 0, 0, 0, 0, 0, 0, 0
     local classPercentages = { Horde = {}, Alliance = {} }
 
-    for _, bg in ipairs(filteredList) do
-        classPercentages[PVP_TRACKER.PLAYER_FACTION_STRING][bg.playerClass] = (classPercentages[PVP_TRACKER.PLAYER_FACTION_STRING][bg.playerClass] or 0) + 1
-        for _, player in pairs(bg.teamComposition.Horde) do
-            classPercentages.Horde[player.class] = (classPercentages.Horde[player.class] or 0) + 1
-        end
-        for _, player in pairs(bg.teamComposition.Alliance) do
-            classPercentages.Alliance[player.class] = (classPercentages.Alliance[player.class] or 0) + 1
-        end
+    for _, bg in ipairs(baseList) do
+        if FILTER.IsAccepted(bg) then
+            classPercentages[PVP_TRACKER.PLAYER_FACTION_STRING][bg.playerClass] = (classPercentages[PVP_TRACKER.PLAYER_FACTION_STRING][bg.playerClass] or 0) + 1
+            for _, player in pairs(bg.teamComposition.Horde) do
+                classPercentages.Horde[player.class] = (classPercentages.Horde[player.class] or 0) + 1
+            end
+            for _, player in pairs(bg.teamComposition.Alliance) do
+                classPercentages.Alliance[player.class] = (classPercentages.Alliance[player.class] or 0) + 1
+            end
 
-        totalBattles = totalBattles + 1
-        totalHonorGained = totalHonorGained + (bg.honorGained or 0)
-        totalKills = totalKills + (bg.kills or 0)
-        totalDeaths = totalDeaths + (bg.deaths or 0)
-        totalHonorableKills = totalHonorableKills + (bg.honorableKills or 0)
-        totalDuration = totalDuration + (bg.duration or 0)
+            totalBattles = totalBattles + 1
+            totalHonorGained = totalHonorGained + (bg.honorGained or 0)
+            totalKills = totalKills + (bg.kills or 0)
+            totalDeaths = totalDeaths + (bg.deaths or 0)
+            totalHonorableKills = totalHonorableKills + (bg.honorableKills or 0)
+            totalDuration = totalDuration + (bg.duration or 0)
 
-        if bg.outcome == "Victory" then
-            totalWins = totalWins + 1
+            if bg.outcome == "Victory" then
+                totalWins = totalWins + 1
+            end
         end
     end
 
@@ -265,6 +339,7 @@ local function CalculateBattlegroundStatsAndTotals(filteredList)
 
     return avgKills, avgDeaths, avgHonorableKills, avgDuration, winRate, totalKills, totalDeaths, totalHonorableKills, totalDuration, totalBattles, avgHonor, totalHonorGained, classPercentages
 end
+
 local function UpdateFactionBarChart(barChart, classPercentages)
     local totalClasses = 8
     local maxBarHeight = barChart:GetHeight() -- Maximum height of a bar
@@ -309,6 +384,7 @@ local function UpdateFactionBarChart(barChart, classPercentages)
         end
     end
 end
+
 local function AddDiagramPlaceholders(baseFrame)
     -- Line Chart Placeholder
     baseFrame.lineChartPlaceholder = CreateFrame("Frame", nil, baseFrame)
@@ -330,6 +406,7 @@ local function AddDiagramPlaceholders(baseFrame)
     texture2:SetColorTexture(0.3, 0.3, 0.3, 0.7)  -- Grey color
 
 end
+
 local function AddStatisticsText(baseFrame)
     local indent = 20  -- Indentation for items within a category
     local categorySpacing = 30  -- Vertical space between categories
@@ -353,11 +430,13 @@ local function AddStatisticsText(baseFrame)
 
     baseFrame.totalEntries = CreateTextString(baseFrame, "GameFontNormalLarge", "TOPLEFT", baseFrame, "TOPLEFT", 250, -35, "Total Entries: ")
 end
+
 local function AddSecondTab(baseFrame)
     AddStatisticsText(baseFrame)
     AddDiagramPlaceholders(baseFrame)
     CreateFactionDropdown(baseFrame)
 end
+
 local function UpdateTabVisibility(selectedTab, bgFrame)
     local isHistoryTab = selectedTab == 1
     local isStatsTab = selectedTab == 2
@@ -396,6 +475,7 @@ local function UpdateTabVisibility(selectedTab, bgFrame)
     bgFrame.classBarChart:SetShown(isStatsTab)
     bgFrame.dropdown:SetShown(isStatsTab)
 end
+
 local function AddResizeHandler(baseFrame)
     local resizeHandle = CreateFrame("Button", nil, baseFrame)
     resizeHandle:SetPoint("BOTTOMRIGHT", baseFrame, "BOTTOMRIGHT", 0, 0)
@@ -423,88 +503,88 @@ local function AddResizeHandler(baseFrame)
     end)
 
 end
-local function GetFilteredHistory(totalHistory)
-    return totalHistory
-end
+
 function FRAME_UI.UpdateBattlegroundHistoryFrame(battleGroundFrame)
     UpdateTabVisibility(battleGroundFrame.selectedTab, battleGroundFrame)
     local isHistoryTab = battleGroundFrame.selectedTab == 1
     local isStatsTab = battleGroundFrame.selectedTab == 2
+    local isInfoTab = battleGroundFrame.selectedTab == 3
+
     if isHistoryTab then
         -- Clear existing rows
         for i, row in ipairs(battleGroundFrame.rows or {}) do
             row:Hide()
         end
-        battleGroundFrame.rows = battleGroundFrame.rows or {}
+
+        battleGroundFrame.rows = {}
 
         local rowHeight = 20
         local smallWidth = 70
+        local i = 1
+        for _, bg in ipairs(PVP_HISTORY) do
+            if FILTER.IsAccepted(bg) then
+                   local row = CreateFrame("Frame", nil, battleGroundFrame.scrollChild)
+                    row:SetSize(755, rowHeight)
+                    row:SetPoint("TOPLEFT", 10, -(i - 1) * rowHeight)
+                    battleGroundFrame.rows[i] = row
 
-        for i, bg in ipairs(GetFilteredHistory(PVP_HISTORY)) do
-            local row = battleGroundFrame.rows[i]
-            if not row then
-                row = CreateFrame("Frame", nil, battleGroundFrame.scrollChild)
-                row:SetSize(755, rowHeight)
-                row:SetPoint("TOPLEFT", 10, -(i - 1) * rowHeight)
-                battleGroundFrame.rows[i] = row
+                    -- Create text elements for each column in the row
+                    row.startTime = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                    row.startTime:SetPoint("LEFT", 0, 0)
+                    row.startTime:SetSize(120, rowHeight)
 
-                -- Create text elements for each column in the row
-                row.startTime = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                row.startTime:SetPoint("LEFT", 0, 0)
-                row.startTime:SetSize(120, rowHeight)
+                    row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                    row.name:SetPoint("LEFT", row.startTime, "RIGHT", 0, 0)
+                    row.name:SetSize(110, rowHeight)
 
-                row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                row.name:SetPoint("LEFT", row.startTime, "RIGHT", 0, 0)
-                row.name:SetSize(110, rowHeight)
+                    row.kills = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                    row.kills:SetPoint("LEFT", row.name, "RIGHT", 0, 0)
+                    row.kills:SetSize(smallWidth, rowHeight)
 
-                row.kills = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                row.kills:SetPoint("LEFT", row.name, "RIGHT", 0, 0)
-                row.kills:SetSize(smallWidth, rowHeight)
+                    row.honorableKills = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                    row.honorableKills:SetPoint("LEFT", row.kills, "RIGHT", 0, 0)
+                    row.honorableKills:SetSize(smallWidth, rowHeight)
 
-                row.honorableKills = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                row.honorableKills:SetPoint("LEFT", row.kills, "RIGHT", 0, 0)
-                row.honorableKills:SetSize(smallWidth, rowHeight)
+                    row.deaths = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                    row.deaths:SetPoint("LEFT", row.honorableKills, "RIGHT", 0, 0)
+                    row.deaths:SetSize(smallWidth, rowHeight)
 
-                row.deaths = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                row.deaths:SetPoint("LEFT", row.honorableKills, "RIGHT", 0, 0)
-                row.deaths:SetSize(smallWidth, rowHeight)
+                    row.honorGained = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                    row.honorGained:SetPoint("LEFT", row.deaths, "RIGHT", 0, 0)
+                    row.honorGained:SetSize(smallWidth + 5, rowHeight)
 
-                row.honorGained = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                row.honorGained:SetPoint("LEFT", row.deaths, "RIGHT", 0, 0)
-                row.honorGained:SetSize(smallWidth + 5, rowHeight)
+                    row.duration = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                    row.duration:SetPoint("LEFT", row.honorGained, "RIGHT", 0, 0)
+                    row.duration:SetSize(102, rowHeight)
 
-                row.duration = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                row.duration:SetPoint("LEFT", row.honorGained, "RIGHT", 0, 0)
-                row.duration:SetSize(102, rowHeight)
+                    row.outcome = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                    row.outcome:SetPoint("LEFT", row.duration, "RIGHT", 0, 0)
+                    row.outcome:SetSize(110, rowHeight)
 
-                row.outcome = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                row.outcome:SetPoint("LEFT", row.duration, "RIGHT", 0, 0)
-                row.outcome:SetSize(110, rowHeight)
+                -- Set text for each column
+                row.startTime:SetText(bg.date)
+                row.name:SetText(bg.name)
+                row.kills:SetText(bg.kills)
+                row.deaths:SetText(bg.deaths)
+                row.duration:SetText(bg.durationText)
+                row.outcome:SetText(bg.outcome)
+                row.honorableKills:SetText(bg.honorableKills or "")
+                row.honorGained:SetText(bg.honorGained or "")
+
+                -- Color coding for outcome
+                if bg.outcome == "Victory" then
+                    row.outcome:SetTextColor(0, 1, 0)  -- Green for victory
+                elseif bg.outcome == "Defeat" then
+                    row.outcome:SetTextColor(1, 0, 0)  -- Red for defeat
+                else
+                    row.outcome:SetTextColor(1, 1, 1)  -- Default color
+                end
+                row:Show()
+                i = i+ 1
             end
-
-            -- Set text for each column
-            row.startTime:SetText(bg.date)
-            row.name:SetText(bg.name)
-            row.kills:SetText(bg.kills)
-            row.deaths:SetText(bg.deaths)
-            row.duration:SetText(bg.durationText)
-            row.outcome:SetText(bg.outcome)
-            row.honorableKills:SetText(bg.honorableKills or "")
-            row.honorGained:SetText(bg.honorGained or "")
-
-            -- Color coding for outcome
-            if bg.outcome == "Victory" then
-                row.outcome:SetTextColor(0, 1, 0)  -- Green for victory
-            elseif bg.outcome == "Defeat" then
-                row.outcome:SetTextColor(1, 0, 0)  -- Red for defeat
-            else
-                row.outcome:SetTextColor(1, 1, 1)  -- Default color
-            end
-
-            row:Show()
         end
     elseif isStatsTab then
-        local avgKills, avgDeaths, avgHonorableKills, avgDuration, winRate, totalKills, totalDeaths, totalHonorableKills, totalTimeInside, totalEntries, avgHonour, totalHonour, classPercentages = CalculateBattlegroundStatsAndTotals(GetFilteredHistory(PVP_HISTORY))
+        local avgKills, avgDeaths, avgHonorableKills, avgDuration, winRate, totalKills, totalDeaths, totalHonorableKills, totalTimeInside, totalEntries, avgHonour, totalHonour, classPercentages = CalculateBattlegroundStatsAndTotals(PVP_HISTORY)
 
         UpdateFactionBarChart(battleGroundFrame.classBarChart, classPercentages)
         -- Format duration as minutes:seconds
@@ -524,8 +604,103 @@ function FRAME_UI.UpdateBattlegroundHistoryFrame(battleGroundFrame)
         battleGroundFrame.timeInsideText:SetText("Time Inside: " .. FormatTime(totalTimeInside))  -- FormatTime should convert seconds to a readable format
         battleGroundFrame.totalHonorGained:SetText("Honour: " .. totalHonour)  -- FormatTime should convert seconds to a readable format
     end
-
 end
+
+local function AddFilterUIElements(filterFrame)
+    -- Player Name Dropdown
+    local playerNameItems = { UnitName("player") }
+    filterFrame.playerDropDown = CreateToggleDropdown(filterFrame, "charName", playerNameItems, "TOPLEFT", filterFrame, "TOPLEFT", 0, -10,115,"Characters")
+
+    local outcomeItems = { "Victory", "Defeat" }
+    filterFrame.outcomeDropdown = CreateToggleDropdown(filterFrame, "outcome", outcomeItems, "LEFT", filterFrame.playerDropDown, "RIGHT", -25, 0,115,"Outcome")
+
+    local zoneNameItems = { "Warsong Gulch", "Arathi Basin", "Alterac Valley" }
+    filterFrame.zoneNameDropdown = CreateToggleDropdown(filterFrame, "zoneName", zoneNameItems, "TOPLEFT", filterFrame.playerDropDown, "BOTTOMLEFT", 0, 0,250,"Battlegrounds")
+
+    local yOffset = -10  
+
+    local inputs = {"killingBlows", "deaths", "honorableKills", "honorGained", "currentRank", "duration"}
+    local labels = {"Kills:", "Deaths:", "Honorable Kills:", "Honor Gained:", "Current Rank:", "Duration:"}
+    local xoffsets = {26, 58,15,24,27,49}
+
+    for i, name in ipairs(inputs) do
+        local input, toggle = AddNumericInputFieldWithToggle(filterFrame, name, labels[i], "TOPLEFT",  filterFrame.zoneNameDropdown, xoffsets[i], yOffset)
+        filterFrame[name .. "Input"], filterFrame[name .. "ToggleButton"] = input, toggle
+        yOffset = yOffset - 25
+    end
+end
+
+
+local function AddFilterPanel(baseFrame)
+    local sidePanel = CreateFrame("Frame", "$parentSidePanel", baseFrame, "BackdropTemplate")
+    sidePanel:SetSize(300, 260)
+    sidePanel:SetPoint("TOPLEFT", baseFrame, "TOPLEFT", -sidePanel:GetWidth(), 0)
+    sidePanel:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        tile = true,
+        tileSize = 32,
+        edgeSize = 32,
+        insets = { left = 11, right = 12, top = 12, bottom = 11 },
+    })
+
+    sidePanel.collapsed = false -- Track whether the panel is collapsed
+
+    local filterButton = CreateFrame("Button", "$parentFilterButton", sidePanel, "UIPanelButtonTemplate")
+    filterButton:SetSize(80, 22)
+    filterButton:SetPoint("BOTTOM", sidePanel, "BOTTOM", 0, 10)
+    filterButton:SetText("Filter")
+
+    filterButton:SetScript("OnClick", function()
+        FILTER.SetValue(sidePanel)
+        FRAME_UI.UpdateBattlegroundHistoryFrame(baseFrame)
+    end)
+
+    local clearButton = CreateFrame("Button", "$parentFilterButton", sidePanel, "UIPanelButtonTemplate")
+    clearButton:SetSize(80, 22)
+    clearButton:SetPoint("BOTTOM", filterButton, "BOTTOM", 93, 0)
+    clearButton:SetText("Clear")
+
+    clearButton:SetScript("OnClick", function()
+        FILTER.Clear()
+    end)
+
+    local toggleButton = CreateFrame("Button", "$parentToggleButton", baseFrame, "UIPanelButtonTemplate")
+    toggleButton:SetSize(16, 16)
+    toggleButton:SetPoint("TOPLEFT", baseFrame, "TOPLEFT", -toggleButton:GetWidth(), 0)
+    toggleButton:SetText(">")
+
+    toggleButton:SetScript("OnClick", function()
+        if sidePanel.collapsed then
+            -- Expand the panel
+            sidePanel:Show()
+            sidePanel:SetPoint("TOPLEFT", baseFrame, "TOPLEFT", -sidePanel:GetWidth(), 0)
+            sidePanel.collapsed = false
+            toggleButton:SetText(">")
+            toggleButton:SetSize(16, 16)
+            toggleButton:ClearAllPoints()
+            toggleButton:SetPoint("TOPRIGHT", sidePanel, "TOPLEFT", 5, 0)
+        else
+            -- Collapse the panel
+            sidePanel:Hide()
+            sidePanel.collapsed = true
+            toggleButton:SetText("<")
+            toggleButton:SetSize(16, 16)
+            toggleButton:ClearAllPoints()
+            toggleButton:SetPoint("TOPLEFT", baseFrame, "TOPLEFT", -toggleButton:GetWidth(), 0)
+        end
+    end)
+
+    AddFilterUIElements(sidePanel)
+
+    sidePanel:Hide()
+    sidePanel.collapsed = true
+    toggleButton:SetText("<")
+    toggleButton:SetPoint("TOPLEFT", baseFrame, "TOPLEFT", -toggleButton:GetWidth(), 0)
+
+    baseFrame.filterPanel = sidePanel
+end
+
 function FRAME_UI.CreateBattlegroundHistoryFrame(baseFrame)
     baseFrame:SetSize(755, 400)  -- Width, Height
     baseFrame:SetPoint("CENTER")  -- Position on the screen
@@ -558,7 +733,7 @@ function FRAME_UI.CreateBattlegroundHistoryFrame(baseFrame)
     baseFrame:SetScript("OnDragStop", baseFrame.StopMovingOrSizing)
 
     AddSecondTab(baseFrame)
-
+    AddFilterPanel(baseFrame)
     -- Create Tabs
     local tab1 = CreateFrame("Button", "$parentTab1", baseFrame, "CharacterFrameTabButtonTemplate")
     tab1:SetPoint("BOTTOMLEFT", baseFrame, "BOTTOMLEFT", 5, -27)

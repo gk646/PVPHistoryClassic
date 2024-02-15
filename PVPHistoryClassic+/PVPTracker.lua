@@ -45,7 +45,6 @@ local function StartBattleground(zoneName)
         duration = 0,
         durationText = nil,
         outcome = "In Progress",
-        kills = 0,
         deaths = 0,
         honorableKills = 0,
         honorGained = 0,
@@ -91,7 +90,7 @@ function PVP_TRACKER.UpdateBattlegroundStats()
 
             -- Update player's own stats
             if name == playerName then
-                CURRENT_BATTLEGROUND.kills = killingBlows
+                CURRENT_BATTLEGROUND.killingBlows = killingBlows
                 CURRENT_BATTLEGROUND.deaths = deaths
                 CURRENT_BATTLEGROUND.honorableKills = honorableKills
                 CURRENT_BATTLEGROUND.honorGained = honorGained
