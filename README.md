@@ -15,6 +15,7 @@ It allows for sorting after common criteria like kills, deaths, or duration and 
 It will be maintained and updated with new features for the upcoming phases with simplicity and efficiency in mind.
 
 
+![History tab with filter](pictures/history.png)
 
 ## Purpose
 
@@ -40,10 +41,10 @@ It tracks all stats accesible from the WoW API, including both teams composition
 
 ## Planned Features
 
-1. **Filters**: Filters are not implemented yet. Will work as described above.
-2. **Tool Tip**: When enabled will share your winrate with other players if both have the addon installed to display each others stats on their tooltip
+1. **Tool Tip**: When enabled will share your winrate with other players if both have the addon installed to display each others stats on their tooltip
 
 ## Usage
 
 Simply install the addon, and you wil get a minimap button. Clicking it toggles the Battleground Frame with all the tabs. You can also reach it by typing */pvphistory*. There are no additional commands or
 configurations yet.
+The buttons next to the numeric input fields are used to set a lower or upper bound in the selected attribute.
