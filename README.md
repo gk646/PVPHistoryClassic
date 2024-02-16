@@ -15,6 +15,7 @@ It allows for sorting after common criteria like kills, deaths, or duration and 
 It will be maintained and updated with new features for the upcoming phases with simplicity and efficiency in mind.
 
 
+![History tab with filter](pictures/history.png)
 
 ## Purpose
 
