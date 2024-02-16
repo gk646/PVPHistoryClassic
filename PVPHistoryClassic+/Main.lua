@@ -2,15 +2,15 @@ MinimapButtonDB = MinimapButtonDB or {}
 MinimapButtonDB.lockDistance = true
 
 -- Main event handling
-frame = CreateFrame("Frame")
+mainFrame = CreateFrame("Frame")
 
-frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-frame:RegisterEvent("UPDATE_BATTLEFIELD_SCORE")
-frame:RegisterEvent("PLAYER_LOGOUT")
-frame:RegisterEvent("UPDATE_BATTLEFIELD_STATUS")
-frame:RegisterEvent("ADDON_LOADED")
+mainFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+mainFrame:RegisterEvent("UPDATE_BATTLEFIELD_SCORE")
+mainFrame:RegisterEvent("PLAYER_LOGOUT")
+mainFrame:RegisterEvent("UPDATE_BATTLEFIELD_STATUS")
+mainFrame:RegisterEvent("ADDON_LOADED")
 
-frame:SetScript("OnEvent", function(self, event, ...)
+mainFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "ZONE_CHANGED_NEW_AREA" then
         PVP_TRACKER.OnPlayerChangingZone()
     elseif event == "PLAYER_LOGOUT" then
@@ -25,7 +25,8 @@ frame:SetScript("OnEvent", function(self, event, ...)
     elseif event == "ADDON_LOADED" then
         local addonName = ...
         if addonName == "PVPHistoryClassic+" then
-            -- Replace with your addon's name
+            battlegroundHistoryFrame = FRAME_UI.CreateBattlegroundHistoryFrame(frame)
+            FRAME_UI.UpdateBattlegroundHistoryFrame(battlegroundHistoryFrame)
             MinimapButton.Init(MinimapButtonDB, "Interface\\Icons\\Ability_Warrior_OffensiveStance",
                     function(self, button)
                         if button == "LeftButton" then
@@ -39,6 +40,6 @@ frame:SetScript("OnEvent", function(self, event, ...)
 end)
 
 
--- Add a slash command to toggle the battleground history frame
+-- Add a slash command to toggle the battleground history mainFrame
 SLASH_PVPHISTORY1 = "/pvphistory"
 SlashCmdList["PVPHISTORY"] = PVP_TRACKER.ToggleBattlegroundHistory

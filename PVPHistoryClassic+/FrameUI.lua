@@ -35,28 +35,21 @@ local function CreateTextString(parent, font, point, relativeTo, relativePoint, 
     return textString
 end
 
-local function CreateToggleDropdown(parent, name, items, point, relativeTo, relativePoint, xOffset, yOffset,width, displayName)
-    local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    label:SetPoint(point, relativeTo, relativePoint, xOffset, yOffset - 20) -- Position the label above the dropdown
-    label:SetText(displayName) 
-
-    
+local function CreateToggleDropdown(parent, name, items, point, relativeTo, relativePoint, xOffset, yOffset, width, displayName)
     local dropdown = CreateFrame("Frame", name, parent, "UIDropDownMenuTemplate")
     dropdown:SetPoint(point, relativeTo, relativePoint, xOffset, yOffset)
     UIDropDownMenu_SetWidth(dropdown, width)
-    filter[name] = {}
+    UIDropDownMenu_SetText(dropdown, displayName)
 
     UIDropDownMenu_Initialize(dropdown, function(self, level, menuList)
         local info = UIDropDownMenu_CreateInfo()
         info.isNotRadio = true
         info.keepShownOnClick = true
-
         for k, v in ipairs(items) do
             info.text = v
-            info.checked = filter[name][v] 
+            info.checked = filter[name][v]
             info.func = function(self)
                 filter[name][v] = not filter[name][v] -- Toggle the checked state
-                self.checked = filter[name][v]
             end
             UIDropDownMenu_AddButton(info)
         end
@@ -101,7 +94,6 @@ local function AddNumericInputFieldWithToggle(parent, name, label, point, relati
     end)
     return inputField, toggleButton
 end
-
 
 local function GenericSort(a, b, key, isNumeric)
     if not a or not b or not a[key] or not b[key] then
@@ -523,43 +515,43 @@ function FRAME_UI.UpdateBattlegroundHistoryFrame(battleGroundFrame)
         local i = 1
         for _, bg in ipairs(PVP_HISTORY) do
             if FILTER.IsAccepted(bg) then
-                   local row = CreateFrame("Frame", nil, battleGroundFrame.scrollChild)
-                    row:SetSize(755, rowHeight)
-                    row:SetPoint("TOPLEFT", 10, -(i - 1) * rowHeight)
-                    battleGroundFrame.rows[i] = row
+                local row = CreateFrame("Frame", nil, battleGroundFrame.scrollChild)
+                row:SetSize(755, rowHeight)
+                row:SetPoint("TOPLEFT", 10, -(i - 1) * rowHeight)
+                battleGroundFrame.rows[i] = row
 
-                    -- Create text elements for each column in the row
-                    row.startTime = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                    row.startTime:SetPoint("LEFT", 0, 0)
-                    row.startTime:SetSize(120, rowHeight)
+                -- Create text elements for each column in the row
+                row.startTime = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.startTime:SetPoint("LEFT", 0, 0)
+                row.startTime:SetSize(120, rowHeight)
 
-                    row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                    row.name:SetPoint("LEFT", row.startTime, "RIGHT", 0, 0)
-                    row.name:SetSize(110, rowHeight)
+                row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.name:SetPoint("LEFT", row.startTime, "RIGHT", 0, 0)
+                row.name:SetSize(110, rowHeight)
 
-                    row.kills = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                    row.kills:SetPoint("LEFT", row.name, "RIGHT", 0, 0)
-                    row.kills:SetSize(smallWidth, rowHeight)
+                row.kills = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.kills:SetPoint("LEFT", row.name, "RIGHT", 0, 0)
+                row.kills:SetSize(smallWidth, rowHeight)
 
-                    row.honorableKills = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                    row.honorableKills:SetPoint("LEFT", row.kills, "RIGHT", 0, 0)
-                    row.honorableKills:SetSize(smallWidth, rowHeight)
+                row.honorableKills = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.honorableKills:SetPoint("LEFT", row.kills, "RIGHT", 0, 0)
+                row.honorableKills:SetSize(smallWidth, rowHeight)
 
-                    row.deaths = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                    row.deaths:SetPoint("LEFT", row.honorableKills, "RIGHT", 0, 0)
-                    row.deaths:SetSize(smallWidth, rowHeight)
+                row.deaths = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.deaths:SetPoint("LEFT", row.honorableKills, "RIGHT", 0, 0)
+                row.deaths:SetSize(smallWidth, rowHeight)
 
-                    row.honorGained = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                    row.honorGained:SetPoint("LEFT", row.deaths, "RIGHT", 0, 0)
-                    row.honorGained:SetSize(smallWidth + 5, rowHeight)
+                row.honorGained = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.honorGained:SetPoint("LEFT", row.deaths, "RIGHT", 0, 0)
+                row.honorGained:SetSize(smallWidth + 5, rowHeight)
 
-                    row.duration = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                    row.duration:SetPoint("LEFT", row.honorGained, "RIGHT", 0, 0)
-                    row.duration:SetSize(102, rowHeight)
+                row.duration = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.duration:SetPoint("LEFT", row.honorGained, "RIGHT", 0, 0)
+                row.duration:SetSize(102, rowHeight)
 
-                    row.outcome = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                    row.outcome:SetPoint("LEFT", row.duration, "RIGHT", 0, 0)
-                    row.outcome:SetSize(110, rowHeight)
+                row.outcome = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.outcome:SetPoint("LEFT", row.duration, "RIGHT", 0, 0)
+                row.outcome:SetSize(110, rowHeight)
 
                 -- Set text for each column
                 row.startTime:SetText(bg.date)
@@ -580,7 +572,7 @@ function FRAME_UI.UpdateBattlegroundHistoryFrame(battleGroundFrame)
                     row.outcome:SetTextColor(1, 1, 1)  -- Default color
                 end
                 row:Show()
-                i = i+ 1
+                i = i + 1
             end
         end
     elseif isStatsTab then
@@ -608,28 +600,24 @@ end
 
 local function AddFilterUIElements(filterFrame)
     -- Player Name Dropdown
-    local playerNameItems = { UnitName("player") }
-    filterFrame.playerDropDown = CreateToggleDropdown(filterFrame, "charName", playerNameItems, "TOPLEFT", filterFrame, "TOPLEFT", 0, -10,115,"Characters")
+    filterFrame.playerDropDown = CreateToggleDropdown(filterFrame, "charNames", playerNameItems, "TOPLEFT", filterFrame, "TOPLEFT", 0, -10, 115, "Characters")
 
-    local outcomeItems = { "Victory", "Defeat" }
-    filterFrame.outcomeDropdown = CreateToggleDropdown(filterFrame, "outcome", outcomeItems, "LEFT", filterFrame.playerDropDown, "RIGHT", -25, 0,115,"Outcome")
+    filterFrame.outcomeDropdown = CreateToggleDropdown(filterFrame, "outcomes", outcomeItems, "LEFT", filterFrame.playerDropDown, "RIGHT", -25, 0, 115, "Outcome")
 
-    local zoneNameItems = { "Warsong Gulch", "Arathi Basin", "Alterac Valley" }
-    filterFrame.zoneNameDropdown = CreateToggleDropdown(filterFrame, "zoneName", zoneNameItems, "TOPLEFT", filterFrame.playerDropDown, "BOTTOMLEFT", 0, 0,250,"Battlegrounds")
+    filterFrame.zoneNameDropdown = CreateToggleDropdown(filterFrame, "zoneNames", zoneNameItems, "TOPLEFT", filterFrame.playerDropDown, "BOTTOMLEFT", 0, 0, 250, "Battlegrounds")
 
-    local yOffset = -10  
+    local yOffset = -10
 
-    local inputs = {"killingBlows", "deaths", "honorableKills", "honorGained", "currentRank", "duration"}
-    local labels = {"Kills:", "Deaths:", "Honorable Kills:", "Honor Gained:", "Current Rank:", "Duration:"}
-    local xoffsets = {26, 58,15,24,27,49}
+    local inputs = { "killingBlows", "deaths", "honorableKills", "honorGained", "currentRank", "duration" }
+    local labels = { "Kills:", "Deaths:", "Honorable Kills:", "Honor Gained:", "Current Rank:", "Duration:" }
+    local xoffsets = { 70, 58, 15, 23, 26, 49 }
 
     for i, name in ipairs(inputs) do
-        local input, toggle = AddNumericInputFieldWithToggle(filterFrame, name, labels[i], "TOPLEFT",  filterFrame.zoneNameDropdown, xoffsets[i], yOffset)
+        local input, toggle = AddNumericInputFieldWithToggle(filterFrame, name, labels[i], "TOPLEFT", filterFrame.zoneNameDropdown, xoffsets[i], yOffset)
         filterFrame[name .. "Input"], filterFrame[name .. "ToggleButton"] = input, toggle
         yOffset = yOffset - 25
     end
 end
-
 
 local function AddFilterPanel(baseFrame)
     local sidePanel = CreateFrame("Frame", "$parentSidePanel", baseFrame, "BackdropTemplate")
@@ -662,11 +650,25 @@ local function AddFilterPanel(baseFrame)
     clearButton:SetText("Clear")
 
     clearButton:SetScript("OnClick", function()
-        FILTER.Clear()
+        FILTER.Clear(sidePanel)
     end)
 
+    local function ShowButtonTooltip(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        if sidePanel.collapsed then
+            GameTooltip:SetText("Expand filters")
+        else
+            GameTooltip:SetText("Collapse filters")
+        end
+        GameTooltip:Show()
+    end
+
+    local function HideButtonTooltip(self)
+        GameTooltip:Hide()
+    end
+
     local toggleButton = CreateFrame("Button", "$parentToggleButton", baseFrame, "UIPanelButtonTemplate")
-    toggleButton:SetSize(16, 16)
+    toggleButton:SetSize(25, 25)
     toggleButton:SetPoint("TOPLEFT", baseFrame, "TOPLEFT", -toggleButton:GetWidth(), 0)
     toggleButton:SetText(">")
 
@@ -677,7 +679,7 @@ local function AddFilterPanel(baseFrame)
             sidePanel:SetPoint("TOPLEFT", baseFrame, "TOPLEFT", -sidePanel:GetWidth(), 0)
             sidePanel.collapsed = false
             toggleButton:SetText(">")
-            toggleButton:SetSize(16, 16)
+            toggleButton:SetSize(25, 25)
             toggleButton:ClearAllPoints()
             toggleButton:SetPoint("TOPRIGHT", sidePanel, "TOPLEFT", 5, 0)
         else
@@ -685,11 +687,13 @@ local function AddFilterPanel(baseFrame)
             sidePanel:Hide()
             sidePanel.collapsed = true
             toggleButton:SetText("<")
-            toggleButton:SetSize(16, 16)
+            toggleButton:SetSize(25, 25)
             toggleButton:ClearAllPoints()
             toggleButton:SetPoint("TOPLEFT", baseFrame, "TOPLEFT", -toggleButton:GetWidth(), 0)
         end
     end)
+    toggleButton:SetScript("OnEnter", ShowButtonTooltip)
+    toggleButton:SetScript("OnLeave", HideButtonTooltip)
 
     AddFilterUIElements(sidePanel)
 
@@ -702,6 +706,15 @@ local function AddFilterPanel(baseFrame)
 end
 
 function FRAME_UI.CreateBattlegroundHistoryFrame(baseFrame)
+    playerNameItems = AccumulateUniquePlayerNames()
+    filter["charNames"][UnitName("player")] = true
+    for _, v in ipairs(outcomeItems) do
+        filter["outcomes"][v] = true
+    end
+    for _, v in ipairs(zoneNameItems) do
+        filter["zoneNames"][v] = true
+    end
+
     baseFrame:SetSize(755, 400)  -- Width, Height
     baseFrame:SetPoint("CENTER")  -- Position on the screen
     baseFrame:SetResizable(true)  -- Enable resizing

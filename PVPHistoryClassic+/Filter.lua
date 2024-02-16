@@ -1,7 +1,7 @@
 FILTER = {}
 
 filter = {
-    charNames = { [UnitName("player")] = true },
+    charNames = {},
     zoneNames = {},
     outcomes = {},
     duration = { value = nil, lowerBound = true },
@@ -26,9 +26,13 @@ function FILTER.SetValue(filterPanel)
     updateNumericFilterFromInput(filterPanel.deathsInput, filterPanel.deathsToggleButton, "deaths")
     updateNumericFilterFromInput(filterPanel.honorableKillsInput, filterPanel.honorableKillsToggleButton, "honorableKills")
     updateNumericFilterFromInput(filterPanel.honorGainedInput, filterPanel.honorGainedToggleButton, "honorGained")
-    updateNumericFilterFromInput(filterPanel.currentRankInput, filterPanel.currentRankToggleButton, "currentRank")
     updateNumericFilterFromInput(filterPanel.durationInput, filterPanel.durationToggleButton, "duration")
 
+    local num = tonumber(filterPanel.currentRankInput:GetText())
+    if num then
+        filter["currentRank"].value =  num + 4
+    end
+    filter["currentRank"].lowerBound = filterPanel.currentRankToggleButton:GetText() == "<"
 end
 
 local function checkNumericField(field, battlegroundValue)
@@ -76,17 +80,53 @@ function FILTER.IsAccepted(battleground)
     return true
 end
 
+function RefreshDropdown(dropdown, name, items)
+    UIDropDownMenu_Initialize(dropdown, function(self, level, menuList)
+        local info = UIDropDownMenu_CreateInfo()
+        info.isNotRadio = true
+        info.keepShownOnClick = true
+        for _, v in ipairs(items) do
+            info.text = v
+            info.checked = filter[name][v] or false
+            info.func = function(self)
+                filter[name][v] = not filter[name][v]
+            end
+            UIDropDownMenu_AddButton(info)
+        end
+    end)
+end
+
 -- Function to clear the filter, resetting fields to nil except for charName
-function FILTER.Clear()
-    filter.charName = UnitName("player") -- Reset charName to the current character's name
-    filter.zoneName = nil
-    filter.duration = nil
-    filter.outcome = nil
-    filter.kills = nil
-    filter.deaths = nil
-    filter.honorableKills = nil
-    filter.honorGained = nil
-    filter.killingBlows = nil
-    filter.currentRank = nil
+function FILTER.Clear(sidePanel)
+    for key in pairs(filter.charNames) do
+        filter.charNames[key] = nil
+    end
+
+    for key in pairs(filter.zoneNames) do
+        filter.zoneNames[key] = nil
+    end
+
+    for key in pairs(filter.outcomes) do
+        filter.outcomes[key] = nil
+    end
+
+    -- Reset numeric filters
+    local numericFields = { "duration", "kills", "deaths", "honorableKills", "honorGained", "killingBlows", "currentRank" }
+    for _, field in ipairs(numericFields) do
+        if filter[field] then
+            filter[field].value = nil
+            if sidePanel[field .. "Input"] then
+                sidePanel[field .. "Input"]:SetText("")
+            end
+        end
+    end
+
+    filter["charNames"][UnitName("player")] = true
+    for _, v in ipairs(outcomeItems) do
+        filter["outcomes"][v] = true
+    end
+    for _, v in ipairs(zoneNameItems) do
+        filter["zoneNames"][v] = true
+    end
 end
 

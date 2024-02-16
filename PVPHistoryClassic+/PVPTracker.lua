@@ -3,6 +3,27 @@ PVP_HISTORY = PVP_HISTORY or {}
 PVP_TRACKER = {}
 PVP_TRACKER.PLAYER_FACTION_STRING = UnitFactionGroup("player")
 
+function AccumulateUniquePlayerNames()
+    local uniquePlayerNames = {}
+    local playerNameSet = {}
+
+    for _, bg in ipairs(PVP_HISTORY) do
+        local playerName = bg.playerName
+        if playerName and not playerNameSet[playerName] then
+            table.insert(uniquePlayerNames, playerName)
+            playerNameSet[playerName] = true
+        end
+    end
+
+    return uniquePlayerNames  -- Return the list of unique player names
+end
+
+playerNameItems = {}
+
+outcomeItems = { "Victory", "Defeat" }
+
+zoneNameItems = { "Warsong Gulch", "Arathi Basin", "Alterac Valley" }
+
 local CURRENT_BATTLEGROUND
 local BATTLEGROUND_START_TIME = nil
 local TEMPORARY_PLAYER_FACTION = nil
@@ -31,10 +52,12 @@ local function SaveTeamComposition()
         end
     end
 end
+
 function PVP_TRACKER.OnCombatLogEventUnfiltered()
     -- Logic to detect honor kills and estimate honor gains
     -- Update CURRENT_BATTLEGROUND.honorGained
 end
+
 local function StartBattleground(zoneName)
     local playerName = UnitName("player")
     local _, playerClass = UnitClass("player")
@@ -56,6 +79,7 @@ local function StartBattleground(zoneName)
     }
     BATTLEGROUND_START_TIME = GetTime()
 end
+
 local function EndBattleground()
     if CURRENT_BATTLEGROUND then
         local endTimeInSeconds = GetTime()
@@ -68,8 +92,7 @@ local function EndBattleground()
     end
 end
 
-battlegroundHistoryFrame = FRAME_UI.CreateBattlegroundHistoryFrame(frame)
-FRAME_UI.UpdateBattlegroundHistoryFrame(battlegroundHistoryFrame)
+battlegroundHistoryFrame = nil
 
 function PVP_TRACKER.OnUpdateBattlefieldStatus(battleFieldIndex)
     local status, mapName, instanceID = GetBattlefieldStatus(battleFieldIndex)
@@ -82,6 +105,7 @@ function PVP_TRACKER.OnUpdateBattlefieldStatus(battleFieldIndex)
         end
     end
 end
+
 function PVP_TRACKER.UpdateBattlegroundStats()
     if CURRENT_BATTLEGROUND then
         local playerName = UnitName("player")
