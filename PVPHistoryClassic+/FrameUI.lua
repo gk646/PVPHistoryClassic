@@ -384,10 +384,13 @@ local function AddDiagramPlaceholders(baseFrame)
     baseFrame.lineChartPlaceholder:SetPoint("TOPRIGHT", baseFrame, "TOPRIGHT", -30, -40)
     baseFrame.lineChartPlaceholder:Hide()  -- Initially hidden
 
+
     baseFrame.classBarChart = CreateFrame("Frame", nil, baseFrame)
     baseFrame.classBarChart:SetSize(250, 150)  -- Adjusted size
     baseFrame.classBarChart:SetPoint("TOPRIGHT", baseFrame.lineChartPlaceholder, "BOTTOMRIGHT", 0, -30)
     baseFrame.classBarChart:Hide()  -- Initially hidden
+
+    baseFrame.classBarChartLabel = CreateTextString(baseFrame, "GameFontNormalLarge", "TOPLEFT", baseFrame.classBarChart, "TOPLEFT", -25, 17, "Average class distribution:")
 
     local texture = baseFrame.lineChartPlaceholder:CreateTexture()
     texture:SetAllPoints(true)
@@ -465,6 +468,7 @@ local function UpdateTabVisibility(selectedTab, bgFrame)
 
     bgFrame.lineChartPlaceholder:SetShown(isStatsTab)
     bgFrame.classBarChart:SetShown(isStatsTab)
+    bgFrame.classBarChartLabel:SetShown(isStatsTab)
     bgFrame.dropdown:SetShown(isStatsTab)
 end
 
