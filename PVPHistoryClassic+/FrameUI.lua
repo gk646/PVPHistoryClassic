@@ -301,7 +301,7 @@ local function CalculateBattlegroundStatsAndTotals(baseList)
 
             totalBattles = totalBattles + 1
             totalHonorGained = totalHonorGained + (bg.honorGained or 0)
-            totalKills = totalKills + (bg.kills or 0)
+            totalKills = totalKills + (bg.killingBlows or 0)
             totalDeaths = totalDeaths + (bg.deaths or 0)
             totalHonorableKills = totalHonorableKills + (bg.honorableKills or 0)
             totalDuration = totalDuration + (bg.duration or 0)
@@ -560,7 +560,7 @@ function FRAME_UI.UpdateBattlegroundHistoryFrame(battleGroundFrame)
                 -- Set text for each column
                 row.startTime:SetText(bg.date)
                 row.name:SetText(bg.name)
-                row.kills:SetText(bg.kills)
+                row.kills:SetText(bg.killingBlows)
                 row.deaths:SetText(bg.deaths)
                 row.duration:SetText(bg.durationText)
                 row.outcome:SetText(bg.outcome)
@@ -640,7 +640,7 @@ local function AddFilterPanel(baseFrame)
 
     local filterButton = CreateFrame("Button", "$parentFilterButton", sidePanel, "UIPanelButtonTemplate")
     filterButton:SetSize(80, 22)
-    filterButton:SetPoint("BOTTOM", sidePanel, "BOTTOM", 0, 10)
+    filterButton:SetPoint("BOTTOM", sidePanel, "BOTTOM", -48, 10)
     filterButton:SetText("Filter")
 
     filterButton:SetScript("OnClick", function()
